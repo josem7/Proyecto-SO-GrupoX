@@ -42,9 +42,10 @@ void cr_bitmap(unsigned disk, bool hex){
 
         unsigned int byte = buffer[index];
         for (size_t i = 0; i < 8; i++) {
-          unsigned int bit = byte & 0x01;
+          unsigned int bit = byte & 0x080;
+          bit >>= 7;
           printf("%d",bit);
-          byte >>= 1;
+          byte <<= 1;
         }
           if (index % 8 == 7) {
               printf("\n");
