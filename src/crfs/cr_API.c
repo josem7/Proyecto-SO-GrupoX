@@ -99,13 +99,13 @@ void cr_bitmap(unsigned disk, bool hex){
 
   fclose(file);
 }
+
 int cr_exists(unsigned disk, char* filename){
   FILE *file;
   char *buffer;
   char entryFileName[29];
   int result;
   file = fopen(MOUNTED_DISK, "rb");
-  printf("DISK NUMBER: %d\n",disk);
   int directoryStartByte = (disk-1) * PARTITION_SIZE;
   fseek(file, directoryStartByte, SEEK_SET);
   buffer = malloc(sizeof(char) * BLOCK_SIZE);
@@ -123,4 +123,30 @@ int cr_exists(unsigned disk, char* filename){
     }
   }
   return(0);
+}
+
+void cr_ls(unsigned disk){
+  FILE *file;
+  char *buffer;
+  char entryFileName[29];
+  int result;
+  file = fopen(MOUNTED_DISK, "rb");
+  printf("Files in DISK NUMBER: %d\n",disk);
+  int directoryStartByte = (disk-1) * PARTITION_SIZE;
+  fseek(file, directoryStartByte, SEEK_SET);
+  buffer = malloc(sizeof(char) * BLOCK_SIZE);
+  fread(buffer, sizeof(char), BLOCK_SIZE, file);
+
+  // 8192 / 32 = 256 osea son 256 entradas
+  for (int entry = 0; entry < 256; entry++) {
+    for (int index = 3; index < 32; index++) {
+      unsigned int byte = buffer[entry*32+index];
+      entryFileName[index-3] = byte;
+    }
+    result = strcmp(entryFileName,"");
+    if (result != 0) {
+      printf("%s\n",entryFileName );
+    }
+  }
+
 }

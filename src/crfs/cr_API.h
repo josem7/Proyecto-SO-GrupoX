@@ -19,3 +19,7 @@ void cr_bitmap(unsigned disk, bool hex);
 // Función para ver si un archivo existe en una determinada partición. Retorna 1
 //si el archivo existe y 0 en caso contrario.
 int cr_exists(unsigned disk, char* filename);
+
+//Función para listar los elementos de una partición. Imprime en pantalla
+//los nombres de todos los archivos contenidos en la partición indicado por disk
+void cr_ls(unsigned disk);
