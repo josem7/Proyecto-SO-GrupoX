@@ -103,6 +103,7 @@ int cr_exists(unsigned disk, char* filename){
   FILE *file;
   char *buffer;
   char entryFileName[29];
+  int result;
   file = fopen(MOUNTED_DISK, "rb");
   printf("DISK NUMBER: %d\n",disk);
   int directoryStartByte = (disk-1) * PARTITION_SIZE;
@@ -116,7 +117,10 @@ int cr_exists(unsigned disk, char* filename){
       unsigned int byte = buffer[entry*32+index];
       entryFileName[index-3] = byte;
     }
-    printf("%s\n",entryFileName);
+    result = strcmp(filename, entryFileName);
+    if (result == 0) {
+      return(1);
+    }
   }
-  return(1);
+  return(0);
 }

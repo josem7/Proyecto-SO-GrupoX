@@ -10,5 +10,6 @@ int main (int argc, char* argv[]) {
   char* diskName =  argv[1];
   cr_mount(diskName);
   printf("%s\n",MOUNTED_DISK);
-  cr_exists(0, "hex");
+  int result = cr_exists(3, "C.mkv");
+  printf("%d\n",result );
 }
