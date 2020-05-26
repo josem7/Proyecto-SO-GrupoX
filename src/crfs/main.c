@@ -10,6 +10,5 @@ int main (int argc, char* argv[]) {
   char* diskName =  argv[1];
   cr_mount(diskName);
   printf("%s\n",MOUNTED_DISK);
-  bool hex = true;
-  cr_bitmap(0, hex);
+  cr_exists(0, "hex");
 }
