@@ -15,7 +15,6 @@ void cr_mount(char* diskname){
 // src = https://stackoverflow.com/questions/55288402/printing-bytes-read-from-binary-file-at-a-certain-file-position-c
 // saqué este código de internet espero que funcione como creo
 void cr_bitmap(unsigned disk, bool hex){
-  int bitMapPointer = (1-disk) * partitionSize + blockSize;
   FILE *file;
   char *buffer;
   int cont = 0;
@@ -24,38 +23,79 @@ void cr_bitmap(unsigned disk, bool hex){
       perror("Could not open file");
       exit(1);
   }
-  fseek(file, bitMapPointer, SEEK_SET);
-  buffer = malloc(sizeof(char) * blockSize);
-  fread(buffer, sizeof(char), blockSize, file);
-  if (hex) {
-    for (int index = 0; index < blockSize; index++) {
-        printf("%02X", ((unsigned int) buffer[index]) & 0x0FF);
-        cont += 1;
-        if (index % 8 == 7) {
-            printf("\n");
-        }else {
-            printf(" ");
-        }
-    }
-  }else {
+  if (disk > 0 && disk <= 4) {
+    printf("DISK NUMBER: %d\n",disk);
+    int bitMapPointer = (disk-1) * partitionSize + blockSize;
+    fseek(file, bitMapPointer, SEEK_SET);
+    buffer = malloc(sizeof(char) * blockSize);
+    fread(buffer, sizeof(char), blockSize, file);
+    if (hex) {
       for (int index = 0; index < blockSize; index++) {
-
-        unsigned int byte = buffer[index];
-        for (size_t i = 0; i < 8; i++) {
-          unsigned int bit = byte & 0x080;
-          bit >>= 7;
-          printf("%d",bit);
-          byte <<= 1;
-        }
-          if (index % 8 == 7) {
+          printf("%02X", ((unsigned int) buffer[index]) & 0x0FF);
+          cont += 1;
+          if (index % 16 == 15) {
               printf("\n");
           }else {
               printf(" ");
           }
-    }
+      }
+    }else {
+        for (int index = 0; index < blockSize; index++) {
 
+          unsigned int byte = buffer[index];
+          for (size_t i = 0; i < 8; i++) {
+            unsigned int bit = byte & 0x080;
+            bit >>= 7;
+            printf("%d",bit);
+            byte <<= 1;
+          }
+            if (index % 16 == 15) {
+                printf("\n");
+            }else {
+                printf(" ");
+            }
+      }
+
+    }
+    free(buffer);
+  }else if(disk == 0){
+    for (unsigned z = 1; z < 5; z++) {
+      printf("DISK NUMBER: %d\n",z);
+      int bitMapPointer = (z-1) * partitionSize + blockSize;
+      fseek(file, bitMapPointer, SEEK_SET);
+      buffer = malloc(sizeof(char) * blockSize);
+      fread(buffer, sizeof(char), blockSize, file);
+      if (hex) {
+        for (int index = 0; index < blockSize; index++) {
+            printf("%02X", ((unsigned int) buffer[index]) & 0x0FF);
+            cont += 1;
+            if (index % 16 == 15) {
+                printf("\n");
+            }else {
+                printf(" ");
+            }
+        }
+      }else {
+          for (int index = 0; index < blockSize; index++) {
+
+            unsigned int byte = buffer[index];
+            for (size_t i = 0; i < 8; i++) {
+              unsigned int bit = byte & 0x080;
+              bit >>= 7;
+              printf("%d",bit);
+              byte <<= 1;
+            }
+              if (index % 16 == 15) {
+                  printf("\n");
+              }else {
+                  printf(" ");
+              }
+
+            }
+      }
+      free(buffer);
+    }
   }
 
-  free(buffer);
-  printf("%d\n",cont );
+  fclose(file);
 }
