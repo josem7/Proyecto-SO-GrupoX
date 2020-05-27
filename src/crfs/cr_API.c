@@ -27,7 +27,6 @@ void cr_mount(char* diskname) {
 void cr_bitmap(unsigned disk, bool hex) {
   FILE *file;
   char *buffer;
-  int cont = 0;
   file = fopen(MOUNTED_DISK, "rb");
   if (file == NULL) {
       perror("Could not open file");
@@ -42,7 +41,6 @@ void cr_bitmap(unsigned disk, bool hex) {
     if (hex) {
       for (int index = 0; index < BLOCK_SIZE; index++) {
           printf("%02X", ((unsigned int) buffer[index]) & 0x0FF);
-          cont += 1;
           if (index % 16 == 15) {
               printf("\n");
           }else {
@@ -78,7 +76,6 @@ void cr_bitmap(unsigned disk, bool hex) {
       if (hex) {
         for (int index = 0; index < BLOCK_SIZE; index++) {
             printf("%02X", ((unsigned int) buffer[index]) & 0x0FF);
-            cont += 1;
             if (index % 16 == 15) {
                 printf("\n");
             } else {
@@ -108,6 +105,57 @@ void cr_bitmap(unsigned disk, bool hex) {
   }
 
   fclose(file);
+}
+
+int cr_exists(unsigned disk, char* filename) {
+  FILE *file;
+  char *buffer;
+  char entryFileName[29];
+  int result;
+  file = fopen(MOUNTED_DISK, "rb");
+  int directoryStartByte = (disk-1) * PARTITION_SIZE;
+  fseek(file, directoryStartByte, SEEK_SET);
+  buffer = malloc(sizeof(char) * BLOCK_SIZE);
+  fread(buffer, sizeof(char), BLOCK_SIZE, file);
+
+  // 8192 / 32 = 256 osea son 256 entradas
+  for (int entry = 0; entry < 256; entry++) {
+    for (int index = 3; index < 32; index++) {
+      unsigned int byte = buffer[entry*32+index];
+      entryFileName[index-3] = byte;
+    }
+    result = strcmp(filename, entryFileName);
+    if (result == 0) {
+      return(1);
+    }
+  }
+  return(0);
+}
+
+void cr_ls(unsigned disk) {
+  FILE *file;
+  char *buffer;
+  char entryFileName[29];
+  int result;
+  file = fopen(MOUNTED_DISK, "rb");
+  printf("Files in DISK NUMBER: %d\n",disk);
+  int directoryStartByte = (disk-1) * PARTITION_SIZE;
+  fseek(file, directoryStartByte, SEEK_SET);
+  buffer = malloc(sizeof(char) * BLOCK_SIZE);
+  fread(buffer, sizeof(char), BLOCK_SIZE, file);
+
+  // 8192 / 32 = 256 osea son 256 entradas
+  for (int entry = 0; entry < 256; entry++) {
+    for (int index = 3; index < 32; index++) {
+      unsigned int byte = buffer[entry*32+index];
+      entryFileName[index-3] = byte;
+    }
+    result = strcmp(entryFileName,"");
+    if (result != 0) {
+      printf("%s\n",entryFileName );
+    }
+  }
+
 }
 
 int cr_hardlink(unsigned disk, char* orig, char* dest) {

@@ -10,6 +10,7 @@ int main (int argc, char* argv[]) {
   char* diskName =  argv[1];
   cr_mount(diskName);
   printf("%s\n",MOUNTED_DISK);
-  bool hex = true;
-  cr_bitmap(0, hex);
+  cr_ls(4);
+  int result = cr_exists(3, "C.mkv");
+  printf("%d\n",result );
 }
