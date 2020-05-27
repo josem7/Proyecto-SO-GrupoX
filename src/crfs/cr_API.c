@@ -126,9 +126,11 @@ int cr_exists(unsigned disk, char* filename) {
     }
     result = strcmp(filename, entryFileName);
     if (result == 0) {
+      fclose(file);
       return(1);
     }
   }
+  fclose(file);
   return(0);
 }
 
@@ -155,22 +157,63 @@ void cr_ls(unsigned disk) {
       printf("%s\n",entryFileName );
     }
   }
-
+  fclose(file);
+  free(buffer);
 }
 
 int cr_hardlink(unsigned disk, char* orig, char* dest) {
   FILE *file;
   char *buffer;
+  char fileData[3];
+  char entryFileData[3];
+  char entryFileName[29];
+  int result;
   file = fopen(MOUNTED_DISK, "rb");
   if (file == NULL) {
     perror("Could not open file");
     exit(1);
   }
 
-  int bitMapPointer = (disk-1) * PARTITION_SIZE + BLOCK_SIZE;
-  fseek(file, bitMapPointer, SEEK_SET);
+  int directoryPointer = (disk-1) * PARTITION_SIZE;
+  fseek(file, directoryPointer, SEEK_SET);
   buffer = malloc(sizeof(char) * BLOCK_SIZE);
   fread(buffer, sizeof(char), BLOCK_SIZE, file);
+
+  for (int entry = 0; entry < 256; entry++) {
+    for (int index = 0; index < 32; index++) {
+      unsigned int byte = buffer[entry * 32 + index];
+      if (index <= 2) {
+        fileData[index] = byte;
+      } else if (index > 2) {
+        entryFileName[index-3] = byte;
+      }
+    }
+    if (strcmp(orig, entryFileName) == 0) {
+      // Sumarle 1 a las referencias
+      size_t j = 0;
+      for (int i = 0; i < 3; i++) {
+        entryFileData[j++] = fileData[i];
+      }
+      entryFileData[j] = 0;
+      break;
+    }
+  }
+  fclose(file);
+
+  for (int entry = 0; entry < 256; entry++) {
+    unsigned int firstByte = buffer[entry*32];
+    unsigned int validity = (firstByte & 10000000) >> 7;
+    if (validity == 0) {
+      file = fopen(MOUNTED_DISK, "wb");
+      strcat(entryFileData, dest);
+      int entryPointer = (disk-1) * PARTITION_SIZE + entry * 32;
+      fseek(file, entryPointer, SEEK_SET);
+      write(file, entryFileData, 32);
+      fclose(file);
+      break;
+    }
+  }
+  free(buffer);
 }
 
 int cr_softlink(unsigned disk_orig, unsigned disk_dest, char * orig, char * dest) {
