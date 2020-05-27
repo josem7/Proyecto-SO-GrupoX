@@ -10,14 +10,21 @@
 int PARTITION_SIZE = 536870912; //512 MB a bytes
 int BLOCK_SIZE = 8192; // 8KB a bytes
 
+// Struct de archivos
+typedef struct crFILE {
+  char *name;
+  char *location;
+  int size;
+  unsigned references;
+} crFILE;
 
-void cr_mount(char* diskname){
+void cr_mount(char* diskname) {
   MOUNTED_DISK = diskname;
 }
 
 // src = https://stackoverflow.com/questions/55288402/printing-bytes-read-from-binary-file-at-a-certain-file-position-c
 // saqué este código de internet espero que funcione como creo
-void cr_bitmap(unsigned disk, bool hex){
+void cr_bitmap(unsigned disk, bool hex) {
   FILE *file;
   char *buffer;
   int cont = 0;
@@ -42,7 +49,7 @@ void cr_bitmap(unsigned disk, bool hex){
               printf(" ");
           }
       }
-    }else {
+    } else {
         for (int index = 0; index < BLOCK_SIZE; index++) {
 
           unsigned int byte = buffer[index];
@@ -54,14 +61,14 @@ void cr_bitmap(unsigned disk, bool hex){
           }
             if (index % 16 == 15) {
                 printf("\n");
-            }else {
+            } else {
                 printf(" ");
             }
       }
 
     }
     free(buffer);
-  }else if(disk == 0){
+  } else if(disk == 0) {
     for (unsigned z = 1; z < 5; z++) {
       printf("DISK NUMBER: %d\n",z);
       int bitMapPointer = (z-1) * PARTITION_SIZE + BLOCK_SIZE;
@@ -74,11 +81,11 @@ void cr_bitmap(unsigned disk, bool hex){
             cont += 1;
             if (index % 16 == 15) {
                 printf("\n");
-            }else {
+            } else {
                 printf(" ");
             }
         }
-      }else {
+      } else {
           for (int index = 0; index < BLOCK_SIZE; index++) {
 
             unsigned int byte = buffer[index];
@@ -90,7 +97,7 @@ void cr_bitmap(unsigned disk, bool hex){
             }
               if (index % 16 == 15) {
                   printf("\n");
-              }else {
+              } else {
                   printf(" ");
               }
 
@@ -101,4 +108,23 @@ void cr_bitmap(unsigned disk, bool hex){
   }
 
   fclose(file);
+}
+
+int cr_hardlink(unsigned disk, char* orig, char* dest) {
+  FILE *file;
+  char *buffer;
+  file = fopen(MOUNTED_DISK, "rb");
+  if (file == NULL) {
+    perror("Could not open file");
+    exit(1);
+  }
+
+  int bitMapPointer = (disk-1) * PARTITION_SIZE + BLOCK_SIZE;
+  fseek(file, bitMapPointer, SEEK_SET);
+  buffer = malloc(sizeof(char) * BLOCK_SIZE);
+  fread(buffer, sizeof(char), BLOCK_SIZE, file);
+}
+
+int cr_softlink(unsigned disk_orig, unsigned disk_dest, char * orig, char * dest) {
+  //
 }
