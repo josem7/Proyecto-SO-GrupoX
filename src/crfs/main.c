@@ -11,8 +11,8 @@ int main (int argc, char* argv[]) {
   cr_mount(diskName);
   printf("%s\n",MOUNTED_DISK);
   cr_ls(1);
-  int result = cr_exists(3, "guides.txt");
+  int result = cr_exists(1, "Baroque.mp3");
   printf("%d\n", result);
-  cr_hardlink(1, "text.txt", "porfa_funciona.txt");
+  cr_hardlink(1, "text.txt", "texto.txt");
   cr_ls(1);
 }

@@ -1,7 +1,11 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include <errno.h>
 #include <stdbool.h>
-#include <unistd.h>
-#include <stdio.h>
+#include <inttypes.h>
+#include <stdint.h>
 #pragma once
 
 
@@ -9,6 +13,17 @@
 int PARTITION_SIZE;
 int BLOCK_SIZE;
 char* MOUNTED_DISK;
+
+//Estructuras
+typedef struct crFILE {
+  char *name;
+  unsigned int indexLocation;
+  uint64_t size;
+  unsigned int references;
+} crFILE;
+//Funciones Utiles
+void delete_crFILE(crFILE *cr_File);
+
 
 // Asigna la variable global MOUNTED_DISK
 void cr_mount(char* diskname);
@@ -28,3 +43,7 @@ int cr_exists(unsigned disk, char* filename);
 void cr_ls(unsigned disk);
 
 void cr_directory(unsigned disk);
+
+//Función para abrir un archivo
+//y se retorna un nuevo crFILE* que lo representa.
+crFILE* cr_open(unsigned disk, char* filename, char mode);
