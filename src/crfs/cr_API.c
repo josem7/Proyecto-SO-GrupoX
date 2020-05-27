@@ -250,8 +250,19 @@ crFILE* cr_open(unsigned disk, char* filename, char mode){
   uint64_t size = 0;
   unsigned int references = 0;
   int result;
+
   if (mode == 'r') {
-    if (cr_exists(disk, filename) == 1) {
+    if (cr_exists(disk, filename) == 1){
+      if (filename[1] == '/'){
+        int softlinkDisk = (int)filename[0] - 48;
+        if (softlinkDisk >= 0 && softlinkDisk <= 4) {
+          disk = softlinkDisk;
+          filename += 2;
+          printf("Soft Link to %s in disk : %d\n",filename, disk);
+        }
+      }
+    }
+    if (cr_exists(disk, filename) == 1){
       file = fopen(MOUNTED_DISK, "rb");
       int directoryStartByte = (disk-1) * PARTITION_SIZE;
       fseek(file, directoryStartByte, SEEK_SET);
