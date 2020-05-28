@@ -457,7 +457,7 @@ int cr_hardlink(unsigned disk, char *orig, char *dest)
 	FILE *file;
 	char *buffer;
 	char fileData[3];
-	char entryFileData[32];
+	char entryFileData[32] = {0};
 	char entryFileName[29];
 	unsigned int location;
 	file = fopen(MOUNTED_DISK, "rb+");
@@ -515,7 +515,7 @@ int cr_hardlink(unsigned disk, char *orig, char *dest)
 	{
 		unsigned int firstByte = buffer[entry * 32];
 		unsigned int validity = (firstByte & 10000000) >> 7;
-		if (validity == 0)
+		if (validity == 0) //entrada de directorio libre
 		{
 			strcat(entryFileData, dest);
 			int entryPointer = (disk - 1) * PARTITION_SIZE + entry * 32;
