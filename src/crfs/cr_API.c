@@ -530,6 +530,59 @@ int cr_hardlink(unsigned disk, char *orig, char *dest)
 	return (0);
 }
 
+int cr_softlink(unsigned disk_orig, unsigned disk_dest, char * orig) {
+  
+  if (cr_exists(disk_orig,orig))
+  { char data[32];
+    FILE* file;
+    file = fopen(MOUNTED_DISK, "rb+");
+    if (file == NULL) {
+    perror("Could not open file");
+    exit(1);}
+    int directoryStartByte = (disk_dest-1) * PARTITION_SIZE;
+    fseek(file, directoryStartByte, SEEK_SET);
+    char* buffer = malloc(sizeof(char) * BLOCK_SIZE);
+    fread(buffer, sizeof(char), BLOCK_SIZE, file);
+    int free_entry;
+    unsigned int first_bit;
+
+    //Obtiene la primera entrada libre en disk_dest 
+    for (int entry = 0; entry < 256; entry++) {
+      unsigned int first_byte=buffer[entry*32];
+      unsigned int first_bit = (first_byte & 0x0FF) >> 7;
+      char first_byte_c = first_byte+'0';
+      if (first_bit==0){
+        free_entry=entry;
+        break;
+      }
+    }
+    // llena los 32 bytes con la informacion
+    char disk_num = disk_orig +'0';
+    for (int i = 0; i < 32; i++)
+      data[i]=NULL;
+    unsigned int new_first_byte = 1 << 7;
+    data[0] = new_first_byte;
+    data[3] = disk_num;
+    data[4] = '/';
+    for (int i = 0; i < strlen(orig); i++)
+      data[5+i]=orig[i];
+    //escribe en la entrada correspondiente
+    int entryPointer = (disk_dest-1) * PARTITION_SIZE + free_entry*32;
+    fseek(file, entryPointer, SEEK_SET);
+    fwrite(&data, sizeof(data), 1, file);
+    fclose(file);
+    free(buffer);
+  }
+  else
+  {
+    printf("ERROR AL CREAR SOFTLINK: el archivo %s no está en disco %d\n", orig, disk_orig);
+  }
+  return 0;
+}
+
+
+
+
 int cr_close(crFILE *file_desc)
 {
 	free(file_desc);

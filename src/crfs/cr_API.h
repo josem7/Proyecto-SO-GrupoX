@@ -33,6 +33,9 @@ void cr_bitmap(unsigned disk, bool hex);
 // Crea un hardlink entre orig y dest
 int cr_hardlink(unsigned disk, char *orig, char *dest);
 
+// Crea un softlink entre orig y dest
+int cr_softlink(unsigned disk_orig, unsigned disk_dest, char* orig);
+
 // Función para ver si un archivo existe en una determinada partición. Retorna 1
 //si el archivo existe y 0 en caso contrario.
 int cr_exists(unsigned disk, char *filename);

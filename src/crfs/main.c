@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
   cr_close(file);
   // cr_bitmap(1, 0);
   cr_hardlink(1, "text.txt", "texto4.txt");
+  cr_softlink(1,4, "Baroque.mp3");
   //cr_ls(1);
   // cr_bitmap(1, 0);
 }
