@@ -13,9 +13,10 @@ int main(int argc, char *argv[])
   printf("%s\n", MOUNTED_DISK);
   cr_ls(1);
   int result = cr_exists(1, "Baroque.mp3");
-  printf("%d\n", result);
+  printf("result: %d\n", result);
   crFILE *file = cr_open(1, "QPC.gif", 'r');
   cr_close(file);
-  cr_hardlink(1, "text.txt", "texto.txt");
+  cr_hardlink(1, "text.txt", "texto1.txt");
   cr_ls(1);
+  cr_bitmap(0, 1);
 }

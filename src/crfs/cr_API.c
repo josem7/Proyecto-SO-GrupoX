@@ -118,6 +118,8 @@ void cr_bitmap(unsigned disk, bool hex)
 	FILE *file;
 	char *buffer;
 	file = fopen(MOUNTED_DISK, "rb");
+	int libre = 0;
+	int ocupado = 0;
 	if (file == NULL)
 	{
 		perror("Could not open file");
@@ -134,6 +136,19 @@ void cr_bitmap(unsigned disk, bool hex)
 		{
 			for (int index = 0; index < BLOCK_SIZE; index++)
 			{
+				///
+				unsigned int byte = buffer[index];
+				for (size_t i = 0; i < 8; i++)
+				{
+					unsigned int bit = byte & 0x080;
+					bit >>= 7;
+					if (bit == 1)
+						ocupado++;
+					else
+						libre++;
+					byte <<= 1;
+				}
+				///
 				printf("%02X", ((unsigned int)buffer[index]) & 0x0FF);
 				if (index % 16 == 15)
 				{
@@ -144,6 +159,9 @@ void cr_bitmap(unsigned disk, bool hex)
 					printf(" ");
 				}
 			}
+			printf("Ocupados: %i\n", ocupado);
+			printf("Libres: %i\n", libre);
+			printf("Total: %i\n", libre + ocupado);
 		}
 		else
 		{
@@ -156,6 +174,10 @@ void cr_bitmap(unsigned disk, bool hex)
 					unsigned int bit = byte & 0x080;
 					bit >>= 7;
 					printf("%d", bit);
+					if (bit == 1)
+						ocupado++;
+					else
+						libre++;
 					byte <<= 1;
 				}
 				if (index % 16 == 15)
@@ -167,6 +189,9 @@ void cr_bitmap(unsigned disk, bool hex)
 					printf(" ");
 				}
 			}
+			printf("Ocupados: %i\n", ocupado);
+			printf("Libres: %i\n", libre);
+			printf("Total: %i\n", libre + ocupado);
 		}
 		free(buffer);
 	}
@@ -183,6 +208,19 @@ void cr_bitmap(unsigned disk, bool hex)
 			{
 				for (int index = 0; index < BLOCK_SIZE; index++)
 				{
+					///
+					unsigned int byte = buffer[index];
+					for (size_t i = 0; i < 8; i++)
+					{
+						unsigned int bit = byte & 0x080;
+						bit >>= 7;
+						if (bit == 1)
+							ocupado++;
+						else
+							libre++;
+						byte <<= 1;
+					}
+					///
 					printf("%02X", ((unsigned int)buffer[index]) & 0x0FF);
 					if (index % 16 == 15)
 					{
@@ -205,6 +243,10 @@ void cr_bitmap(unsigned disk, bool hex)
 						unsigned int bit = byte & 0x080;
 						bit >>= 7;
 						printf("%d", bit);
+						if (bit == 1)
+							ocupado++;
+						else
+							libre++;
 						byte <<= 1;
 					}
 					if (index % 16 == 15)
@@ -219,6 +261,9 @@ void cr_bitmap(unsigned disk, bool hex)
 			}
 			free(buffer);
 		}
+		printf("Ocupados: %i\n", ocupado);
+		printf("Libres: %i\n", libre);
+		printf("Total: %i\n", libre + ocupado);
 	}
 
 	fclose(file);
@@ -487,7 +532,6 @@ int cr_hardlink(unsigned disk, char *orig, char *dest)
 
 int cr_close(crFILE *file_desc)
 {
-	printf("nombre archivo desde close: %s\n", file_desc->name);
 	free(file_desc);
 	return (0);
 }
