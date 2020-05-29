@@ -18,6 +18,7 @@ typedef struct crFILE
 {
   char *name;
   unsigned int indexLocation;
+  unsigned int disk;
   uint64_t size;
   unsigned int references;
 } crFILE;
@@ -34,7 +35,7 @@ void cr_bitmap(unsigned disk, bool hex);
 int cr_hardlink(unsigned disk, char *orig, char *dest);
 
 // Crea un softlink entre orig y dest
-int cr_softlink(unsigned disk_orig, unsigned disk_dest, char* orig);
+int cr_softlink(unsigned disk_orig, unsigned disk_dest, char *orig);
 
 // Función para ver si un archivo existe en una determinada partición. Retorna 1
 //si el archivo existe y 0 en caso contrario.
@@ -51,3 +52,5 @@ int cr_close(crFILE *file_desc);
 //Función para abrir un archivo
 //y se retorna un nuevo crFILE* que lo representa.
 crFILE *cr_open(unsigned disk, char *filename, char mode);
+
+int cr_write(crFILE *file_desc, void *buffer, int nbytes);
