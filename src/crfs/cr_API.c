@@ -12,6 +12,7 @@
 // Global Variables
 int PARTITION_SIZE = 536870912; //512 MB a bytes
 int BLOCK_SIZE = 8192; // 8KB a bytes
+int MAX_SIZE;
 
 // Struct de archivos
 
@@ -342,10 +343,13 @@ crFILE* cr_open(unsigned disk, char* filename, char mode){
 int cr_hardlink(unsigned disk, char* orig, char* dest) {
   FILE *file;
   char *buffer;
+  char *strNum;
   char fileData[3];
   char entryFileData[32];
   char entryFileName[29];
   unsigned int location;
+  unsigned int references = 0;
+  uint64_t size = 0;
   file = fopen(MOUNTED_DISK, "rb+");
   if (file == NULL) {
     perror("Could not open file");
@@ -373,12 +377,20 @@ int cr_hardlink(unsigned disk, char* orig, char* dest) {
       location = (byte1 << 16) + (byte2 << 8) + byte3;
       int indexBlockPointer = location * BLOCK_SIZE;
       fseek(file, indexBlockPointer, SEEK_SET);
-      char *strNum;
-      strNum = malloc(sizeof(char) * 4);
-      fread(strNum, sizeof(char), 4, file);
-      int num = strtol(strNum, & strNum, 10) + 1;
+      strNum = malloc(sizeof(char) * BLOCK_SIZE);
+      fread(strNum, sizeof(char), BLOCK_SIZE, file);
+
+      for (size_t i = 0; i < 4; i++) {
+        unsigned int byte = strNum[i] & 0x0FF;
+        references += byte;
+        if (i != 3) {
+          size <<= 8;
+        }
+      }
+      references++;
       fseek(file, indexBlockPointer, SEEK_SET);
-      fwrite(&num, sizeof(int), 1, file);
+      fwrite(&references, sizeof(int), 1, file);
+      free(strNum);
 
       size_t j = 0;
       for (int i = 0; i < 3; i++) {
@@ -402,4 +414,21 @@ int cr_hardlink(unsigned disk, char* orig, char* dest) {
     }
   }
   free(buffer);
+}
+
+int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
+  FILE *file;
+  char *ptrs;
+  char fileName[29];
+
+  file = fopen(MOUNTED_DISK, "rb+");
+  if (file == NULL) {
+    perror("Could not open file");
+    exit(1);
+  }
+
+  int indexPointer = file_desc->indexLocation + 12;
+  fseek(file, indexPointer, SEEK_SET);
+  ptrs = malloc(sizeof(char) * n_bytes);
+  fread(ptrs, sizeof(char), n_bytes, file);
 }
