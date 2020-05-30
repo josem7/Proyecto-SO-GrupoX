@@ -410,7 +410,7 @@ crFILE *cr_open(unsigned disk, char *filename, char mode)
 			for (size_t i = 4; i < 12; i++)
 			{
 				unsigned int byte = buffer[i] & 0x0FF;
-				printf("byte %u\n", byte);
+
 				size += byte;
 				if (i != 11)
 				{
@@ -668,7 +668,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes)
 			free(dataBlock);
 			break;
 		}
-		}
+	}
 	if (2044 * BLOCK_SIZE < real_bytes)
 	{
 		for (size_t i = 4; 0 < i; i--)
@@ -739,7 +739,6 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes)
 {
 	//next_free_block(disk)
 	char entryFileData[32] = {0};
-	//int contador = 0;
 	FILE *file = fopen(MOUNTED_DISK, "rb+");
 	//////
 	char *buffer_aux;
@@ -754,8 +753,10 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes)
 	{
 		unsigned int firstByte = buffer_aux[entry * 32];
 		unsigned int validity = (firstByte & 10000000) >> 7;
+
 		if (validity == 0) //entrada de directorio libre
 		{
+			printf("entry: %i\n", entry);
 			unsigned int validez = 1;
 			unsigned int indexBlock = file_desc->indexLocation;
 
@@ -776,39 +777,262 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes)
 					break;
 			}
 			//esto es para modificar bloque directorio
+			int bitMapPointer = (file_desc->disk - 1) * PARTITION_SIZE + BLOCK_SIZE;
 			int entryPointer = (file_desc->disk - 1) * PARTITION_SIZE + entry * 32;
 			fseek(file, entryPointer, SEEK_SET);
-			fwrite(&entryFileData, sizeof(entryFileData), 1, file);
+			//fwrite(&entryFileData, sizeof(entryFileData), 1, file);
+			free(buffer_aux);
+			fclose(file);
+
+			file = fopen(MOUNTED_DISK, "rb+");
+			fseek(file, bitMapPointer, SEEK_SET);
+			buffer_aux = malloc(sizeof(char) * BLOCK_SIZE);
+			fread(buffer_aux, sizeof(char), BLOCK_SIZE, file); //en i buffer guardo bloque bitmap
+			fclose(file);
+
+			int byte = 0;
+			int contador_bit = 0;
+			int listo = 0;
+			//unsigned int byte_entero = 0;
+			for (int index = 0; index < BLOCK_SIZE; index++)
+			{
+				unsigned int byte_entero = buffer_aux[index];
+				unsigned int byte = buffer_aux[index];
+				for (size_t i = 0; i < 8; i++)
+				{
+
+					if (contador_bit == file_desc->indexLocation) //esto es para cambiar el valor de bitmap
+					{
+						if (contador_bit % 8 == 0)
+							buffer_aux[index] = buffer_aux[index] | 10000000;
+						else if (contador_bit % 8 == 1)
+							buffer_aux[index] = buffer_aux[index] | 1000000;
+						else if (contador_bit % 8 == 2)
+							buffer_aux[index] = buffer_aux[index] | 100000;
+						else if (contador_bit % 8 == 3)
+							buffer_aux[index] = buffer_aux[index] | 10000;
+						else if (contador_bit % 8 == 4)
+							buffer_aux[index] = buffer_aux[index] | 1000;
+						else if (contador_bit % 8 == 5)
+							buffer_aux[index] = buffer_aux[index] | 100;
+						else if (contador_bit % 8 == 6)
+							buffer_aux[index] = buffer_aux[index] | 10;
+						else if (contador_bit % 8 == 7)
+							buffer_aux[index] = buffer_aux[index] | 1;
+						file = fopen(MOUNTED_DISK, "rb+");
+						fseek(file, bitMapPointer, SEEK_SET);
+						fwrite(buffer_aux, 1, BLOCK_SIZE, file);
+						fclose(file);
+						contador_bit++;
+						listo = 1;
+						free(buffer_aux);
+						break;
+					}
+					contador_bit++;
+				}
+				if (listo == 1)
+					break;
+			}
+			break;
+		}
+	}
+	char *buffer2;
+	buffer2 = malloc(sizeof(char) * (nbytes + 1));
+	int j = 0;
+	for (int i = 0; i <= nbytes; i++)
+	{
+		buffer2[j++] = NULL;
+	}
+	buffer2[nbytes] = 0;
+	char *buffer_escritura;
+	buffer_escritura = malloc(sizeof(char) * BLOCK_SIZE);
+	for (int i = 0; i < BLOCK_SIZE; i++)
+	{
+		buffer_escritura[i] = NULL;
+	}
+
+	strcat(buffer2, buffer);
+	int restantes = 0;
+	//escribir en bloques (hay que marcaros en bloque indice y bitmap)
+	int por_escribir = nbytes;
+
+	//todo este for es para escribir en bitmap
+	int lista_punteros[2044] = {0};
+	int contador_punteros = 0;
+	for (int j = 0; j < nbytes; j++)
+	{
+		buffer_escritura[restantes] = buffer2[j];
+		restantes++;
+		//printf("buffer de escritura %i %i\n", buffer_escritura[0], buffer_escritura[1]);
+
+		if (restantes == BLOCK_SIZE)
+		{
+			file = fopen(MOUNTED_DISK, "rb+");
+			int indexPointer = next_free_block(file_desc->disk) * BLOCK_SIZE; //falta guardar en su respectivo bloque indice este bloque y bitmap
+			//printf("index pointer %i\n", indexPointer);
+			lista_punteros[contador_punteros] = indexPointer;
+			contador_punteros++;
+			//printf("index pointer %i\n", indexPointer / BLOCK_SIZE);
+			fseek(file, indexPointer, SEEK_SET);
+			fwrite(buffer_escritura, 1, BLOCK_SIZE, file); //se guarda
+			fclose(file);
+
+			int bitMapPointer = (file_desc->disk - 1) * PARTITION_SIZE + BLOCK_SIZE;
+			file = fopen(MOUNTED_DISK, "rb+");
+			fseek(file, bitMapPointer, SEEK_SET);
+			buffer_aux = malloc(sizeof(char) * BLOCK_SIZE);
+			fread(buffer_aux, sizeof(char), BLOCK_SIZE, file); //en i buffer guardo bloque bitmap
+			fclose(file);
+			int byte = 0;
+			int contador_bit = 0;
+			int listo = 0;
+			for (int index = 0; index < BLOCK_SIZE; index++)
+			{
+				unsigned int byte_entero = buffer_aux[index];
+				unsigned int byte = buffer_aux[index];
+				for (size_t i = 0; i < 8; i++)
+				{
+					if (contador_bit == indexPointer / BLOCK_SIZE) // igual a next free block
+					{
+						if (contador_bit % 8 == 0)
+							buffer_aux[index] = buffer_aux[index] | 10000000;
+						else if (contador_bit % 8 == 1)
+							buffer_aux[index] = buffer_aux[index] | 1000000;
+						else if (contador_bit % 8 == 2)
+							buffer_aux[index] = buffer_aux[index] | 100000;
+						else if (contador_bit % 8 == 3)
+							buffer_aux[index] = buffer_aux[index] | 10000;
+						else if (contador_bit % 8 == 4)
+							buffer_aux[index] = buffer_aux[index] | 1000;
+						else if (contador_bit % 8 == 5)
+							buffer_aux[index] = buffer_aux[index] | 100;
+						else if (contador_bit % 8 == 6)
+							buffer_aux[index] = buffer_aux[index] | 10;
+						else if (contador_bit % 8 == 7)
+							buffer_aux[index] = buffer_aux[index] | 1;
+						file = fopen(MOUNTED_DISK, "rb+");
+						//printf("se escribe en bitmap\n");
+						fseek(file, bitMapPointer, SEEK_SET);
+						fwrite(buffer_aux, 1, BLOCK_SIZE, file);
+						fclose(file);
+						contador_bit++;
+						listo = 1;
+						por_escribir -= BLOCK_SIZE;
+						free(buffer_aux);
+						break;
+					}
+					contador_bit++;
+				}
+				if (listo == 1)
+					break;
+			}
+
+			restantes = 0;
+		}
+
+		if (por_escribir < BLOCK_SIZE) //cuando hay que escribir menos de un bloque
+		{
+			printf("quedan por escribir %i\n", por_escribir);
+
+			//se escriben el bloque en disco
+			file = fopen(MOUNTED_DISK, "rb+");
+			int indexPointer = next_free_block(file_desc->disk) * BLOCK_SIZE; //falta guardar en su respectivo bloque indice este bloque y bitmap
+			//printf("index pointer %i\n", indexPointer);
+			lista_punteros[contador_punteros] = indexPointer;
+			contador_punteros++;
+			fseek(file, indexPointer, SEEK_SET);
+			fwrite(buffer_escritura, 1, por_escribir, file); //se guarda
+			fclose(file);
+			//se escribe el ultimo bloque en bitmap
+			int bitMapPointer = (file_desc->disk - 1) * PARTITION_SIZE + BLOCK_SIZE;
+			file = fopen(MOUNTED_DISK, "rb+");
+			fseek(file, bitMapPointer, SEEK_SET);
+			buffer_aux = malloc(sizeof(char) * BLOCK_SIZE);
+			fread(buffer_aux, sizeof(char), BLOCK_SIZE, file); //en i buffer guardo bloque bitmap
+			fclose(file);
+			int byte = 0;
+			int contador_bit = 0;
+			int listo = 0;
+			for (int index = 0; index < BLOCK_SIZE; index++)
+			{
+				unsigned int byte_entero = buffer_aux[index];
+				unsigned int byte = buffer_aux[index];
+				for (size_t i = 0; i < 8; i++)
+				{
+					if (contador_bit == indexPointer / BLOCK_SIZE) // igual a next free block
+					{
+						if (contador_bit % 8 == 0)
+							buffer_aux[index] = buffer_aux[index] | 10000000;
+						else if (contador_bit % 8 == 1)
+							buffer_aux[index] = buffer_aux[index] | 1000000;
+						else if (contador_bit % 8 == 2)
+							buffer_aux[index] = buffer_aux[index] | 100000;
+						else if (contador_bit % 8 == 3)
+							buffer_aux[index] = buffer_aux[index] | 10000;
+						else if (contador_bit % 8 == 4)
+							buffer_aux[index] = buffer_aux[index] | 1000;
+						else if (contador_bit % 8 == 5)
+							buffer_aux[index] = buffer_aux[index] | 100;
+						else if (contador_bit % 8 == 6)
+							buffer_aux[index] = buffer_aux[index] | 10;
+						else if (contador_bit % 8 == 7)
+							buffer_aux[index] = buffer_aux[index] | 1;
+						file = fopen(MOUNTED_DISK, "rb+");
+						//printf("se escribe en bitmap\n");
+						fseek(file, bitMapPointer, SEEK_SET);
+						fwrite(buffer_aux, 1, BLOCK_SIZE, file);
+						fclose(file);
+						contador_bit++;
+						listo = 1;
+						por_escribir -= BLOCK_SIZE;
+						free(buffer_aux);
+						break;
+					}
+					contador_bit++;
+				}
+				if (listo == 1)
+					break;
+			}
 
 			break;
 		}
 	}
+
+	file = fopen(MOUNTED_DISK, "rb+");
+	int indexPointer = file_desc->indexLocation * BLOCK_SIZE;
+	fseek(file, indexPointer, SEEK_SET);
+	buffer_aux = malloc(sizeof(char) * BLOCK_SIZE);
+	fread(buffer_aux, sizeof(char), BLOCK_SIZE, file);
+	//cambiar valores en buffer aux y escribirlo en disco (posicion indexPointer)
+	buffer_aux[3] = 1; //al crearse solo se tiene una referencia
+	//tamaño archivo
+	int64_t nbytes_aux = nbytes & 0x0FFFFFFFF;
+	buffer_aux[4] = nbytes_aux >> 56;
+	buffer_aux[5] = nbytes_aux >> 48;
+	buffer_aux[6] = nbytes_aux >> 40;
+	buffer_aux[7] = nbytes_aux >> 32;
+	buffer_aux[8] = nbytes_aux >> 24;
+	buffer_aux[9] = nbytes_aux >> 16;
+	buffer_aux[10] = nbytes_aux >> 8;
+	buffer_aux[11] = nbytes_aux;
+	//escribir direccion de punteros en bloque indice
+	int puntero = 0;
+	for (int i = 12; i < 30;)
+	{
+		//printf("i en for %i\n", i);
+		buffer_aux[i] = lista_punteros[puntero] >> 24;
+		buffer_aux[i + 1] = lista_punteros[puntero + 1] >> 16;
+		buffer_aux[i + 2] = lista_punteros[puntero + 2] >> 8;
+		buffer_aux[i + 3] = lista_punteros[puntero + 3];
+		puntero++;
+		i += 4;
+	}
+	fwrite(buffer_aux, 1, BLOCK_SIZE, file);
+
+	int contador = 0;
 	free(buffer_aux);
 	fclose(file);
-
-	/////////
-	int contador = 0;
-	int lista_punteros[2044] = {0};
-	for (int i = 12; i < 8188;) //8188
-	{
-		uint64_t puntero = 0;
-		for (int j = 0; j < 4; j++)
-		{
-			//printf("%d ", buffer_aux[i + j] & 0x0FF); //corresponde a 4 bytes de ubicacion de bloques
-			puntero += buffer_aux[i + j] & 0x0FF;
-			if (j != 3)
-			{
-				puntero <<= 8;
-			}
-		}
-		lista_punteros[contador] = puntero;
-		if (puntero > 0)
-			contador++;
-		//printf("\npuntero %ld\n", puntero);
-
-		i += 4;
-		//printf("\n");
-	}
-	printf("contador: %d\n", contador);
+	free(buffer2);
+	free(buffer_escritura);
 	return 0;
 }
