@@ -56,3 +56,7 @@ crFILE *cr_open(unsigned disk, char *filename, char mode);
 int cr_write(crFILE *file_desc, void *buffer, int nbytes);
 
 int cr_read(crFILE *file_desc, void *buffer, int n_bytes);
+
+//Función que se encarga de co-piar un archivo, la partición completa (
+//disk ∈ {1, ..., 4}) o el disco completo (disk = 0)
+int cr_unload(unsigned disk, char* orig, char* dest);

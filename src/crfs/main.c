@@ -12,8 +12,10 @@ int main(int argc, char *argv[])
   cr_mount(diskName);
   printf("%s\n", MOUNTED_DISK);
   cr_ls(1);
-  crFILE *file = cr_open(1, "guides.txt", 'r');
-  void *buffer = malloc(16000);
-  int result = cr_read(file, buffer, 16000);
-  printf("Result: %d\n", result);
+  //crFILE *file = cr_open(1, "guides.txt", 'r');
+  //void *buffer = malloc(16000);
+  //int result = cr_read(file, buffer, 16000);
+  //free(buffer);
+  cr_unload(1, "guides.txt", "guides.txt");
+  //cr_unload(1, "text.txt", "text.txt");
 }

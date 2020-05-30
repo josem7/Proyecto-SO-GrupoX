@@ -69,11 +69,6 @@ unsigned next_free_block(unsigned disk)
 	return (0);
 }
 
-// Funciones Pedidas
-void cr_mount(char *diskname)
-{
-	MOUNTED_DISK = diskname;
-}
 // imprime el block de directorio en bits
 void cr_directory(unsigned disk)
 {
@@ -111,6 +106,38 @@ void cr_directory(unsigned disk)
 	}
 	free(buffer);
 	fclose(file);
+}
+
+// imprime un bloque en Hex
+void cr_block(unsigned block)
+{
+	FILE *file;
+	char *buffer;
+	file = fopen(MOUNTED_DISK, "rb");
+	int blockStart = block * BLOCK_SIZE;
+  printf("Block start: %d\n",blockStart );
+	fseek(file, blockStart, SEEK_SET);
+	buffer = malloc(sizeof(char) * BLOCK_SIZE);
+	fread(buffer, sizeof(char), BLOCK_SIZE, file);
+  for (int index = 0; index < BLOCK_SIZE; index++)
+  {
+    printf("%02X", ((unsigned int)buffer[index]) & 0x0FF);
+    if (index % 16 == 15)
+    {
+      printf("\n");
+    }
+    else
+    {
+      printf(" ");
+    }
+  }
+	free(buffer);
+	fclose(file);
+}
+// Funciones Pedidas
+void cr_mount(char *diskname)
+{
+	MOUNTED_DISK = diskname;
 }
 
 // src = https://stackoverflow.com/questions/55288402/printing-bytes-read-from-binary-file-at-a-certain-file-position-c
@@ -614,8 +641,11 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
   fread(indexBlock, sizeof(char), BLOCK_SIZE, file);
 	for (int ptr = 0; ptr < 2044; ptr++) {
 		for (int i = 0; i < 4; i++) {
-			unsigned int byte = indexBlock[ptr * 4 + 11 + i] & 0x0FF;
+			unsigned int byte = indexBlock[ptr * 4 + 12 + i] & 0x0FF;
 			location += byte;
+			if (i != 3) {
+				location <<= 8;
+			}
 		}
 		int dataPointer = location * BLOCK_SIZE;
 		location = 0;
@@ -625,7 +655,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 		if ((ptr + 1) * BLOCK_SIZE <= real_bytes) {
 			strcat(buffer, dataBlock);
 		} else if ((ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
-			int difference = (ptr + 1) * BLOCK_SIZE - real_bytes;
+			int difference = BLOCK_SIZE - (ptr + 1) * BLOCK_SIZE + real_bytes;
 			char *differenceData;
 			differenceData = malloc(difference);
 			size_t j = 0;
@@ -635,6 +665,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
       differenceData[j] = 0;
 			strcat(buffer, differenceData);
 			free(differenceData);
+			free(dataBlock);
 			break;
 		} else {
 			break;
@@ -655,6 +686,9 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 			for (size_t i = 0; i < 4; i++) {
 				unsigned int byte = indirectionBlock[ptr * 4 + i] & 0x0FF;
 				location += byte;
+				if (i != 3) {
+					location <<= 8;
+				}
 			}
 			int dataPointer = location * BLOCK_SIZE;
 			location = 0;
@@ -665,7 +699,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 				strcat(buffer, dataBlock);
 				free(dataBlock);
 			} else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
-				int difference = 2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes;
+				int difference = BLOCK_SIZE - (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes);
 				char *differenceData;
 				differenceData = malloc(difference);
 				size_t j = 0;
@@ -684,6 +718,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 		}
 	}
 	free(indexBlock);
+	fclose(file);
 	return(real_bytes);
 }
 
@@ -765,4 +800,18 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes) {
 	// }
 	// printf("contador: %d\n", contador);
 	return 0;
+}
+
+int cr_unload(unsigned disk, char* orig, char* dest){
+  crFILE *file = cr_open(disk, orig, 'r');
+  char *buffer = calloc(file->size, 1);
+  int result = cr_read(file, buffer, file->size);
+  printf("%d\n",result );
+  FILE *write_ptr;
+  write_ptr = fopen(dest,"wb");  // w for write, b for binary
+  int escrito = fwrite(buffer,1,file->size, write_ptr);
+  printf("%d\n",escrito);
+  fclose(write_ptr);
+  free(buffer);
+  return(1);
 }
