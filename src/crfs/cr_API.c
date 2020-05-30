@@ -627,12 +627,14 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 		} else if ((ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
 			int difference = (ptr + 1) * BLOCK_SIZE - real_bytes;
 			char *differenceData;
+			differenceData = malloc(difference);
 			size_t j = 0;
       for (int i = 0; i < difference; i++) {
         differenceData[j++] = dataBlock[i];
       }
       differenceData[j] = 0;
 			strcat(buffer, differenceData);
+			free(differenceData);
 			break;
 		} else {
 			break;
@@ -665,20 +667,23 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 			} else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
 				int difference = 2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes;
 				char *differenceData;
+				differenceData = malloc(difference);
 				size_t j = 0;
 				for (int i = 0; i < difference; i++) {
 					differenceData[j++] = dataBlock[i];
 				}
 				differenceData[j] = 0;
 				strcat(buffer, differenceData);
+				free(differenceData);
+				free(indirectionBlock);
 				break;
 			} else {
+				free(indirectionBlock);
 				break;
 			}
 		}
 	}
 	free(indexBlock);
-	free(indirectionBlock);
 	return(real_bytes);
 }
 

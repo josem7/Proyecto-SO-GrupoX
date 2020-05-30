@@ -13,5 +13,7 @@ int main(int argc, char *argv[])
   printf("%s\n", MOUNTED_DISK);
   cr_ls(1);
   crFILE *file = cr_open(1, "guides.txt", 'r');
-  cr_read(file);
+  void *buffer = malloc(16000);
+  int result = cr_read(file, buffer, 16000);
+  printf("Result: %d\n", result);
 }

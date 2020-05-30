@@ -54,3 +54,5 @@ int cr_close(crFILE *file_desc);
 crFILE *cr_open(unsigned disk, char *filename, char mode);
 
 int cr_write(crFILE *file_desc, void *buffer, int nbytes);
+
+int cr_read(crFILE *file_desc, void *buffer, int n_bytes);
