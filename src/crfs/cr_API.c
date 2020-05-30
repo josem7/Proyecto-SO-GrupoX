@@ -593,7 +593,6 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
   char *indexBlock;
 	char *dataBlock;
 	char *indirectionBlock;
-	char *data;
 	unsigned int location = 0;
 	unsigned int indirectionLocation = 0;
 
@@ -608,7 +607,6 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 	} else {
 		real_bytes = n_bytes;
 	}
-	data = malloc(real_bytes);
 
   int indexPointer = file_desc->indexLocation * BLOCK_SIZE;
   fseek(file, indexPointer, SEEK_SET);
@@ -625,7 +623,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 		dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
 		fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
 		if ((ptr + 1) * BLOCK_SIZE <= real_bytes) {
-			strcat(data, dataBlock);
+			strcat(buffer, dataBlock);
 		} else if ((ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
 			int difference = (ptr + 1) * BLOCK_SIZE - real_bytes;
 			char *differenceData;
@@ -634,7 +632,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
         differenceData[j++] = dataBlock[i];
       }
       differenceData[j] = 0;
-			strcat(data, differenceData);
+			strcat(buffer, differenceData);
 			break;
 		} else {
 			break;
@@ -662,7 +660,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 			dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
 			fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
 			if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE <= real_bytes) {
-				strcat(data, dataBlock);
+				strcat(buffer, dataBlock);
 				free(dataBlock);
 			} else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
 				int difference = 2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes;
@@ -672,7 +670,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 					differenceData[j++] = dataBlock[i];
 				}
 				differenceData[j] = 0;
-				strcat(data, differenceData);
+				strcat(buffer, differenceData);
 				break;
 			} else {
 				break;
