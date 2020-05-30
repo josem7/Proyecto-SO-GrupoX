@@ -791,7 +791,7 @@ int cr_rm(unsigned disk, char* filename){
 					unsigned int byte2 = buffer[e * 32 + 1] & 0x0FF;
 					unsigned int byte3 = buffer[e * 32 + 2] & 0x0FF;
 					unsigned int location = (byte1 << 16) + (byte2 << 8) + byte3;
-					printf(" la ubicación es %d", location);
+					//printf(" la ubicación es %d", location);
 					free(buffer);
 					int indexBlockPointer = location * BLOCK_SIZE;
 					fseek(file, indexBlockPointer, SEEK_SET);
@@ -825,7 +825,7 @@ int cr_rm(unsigned disk, char* filename){
 							}
 							else
 							{
-								blocks[puntero]=0;
+								break;
 							}
 
 						}
@@ -834,7 +834,7 @@ int cr_rm(unsigned disk, char* filename){
 						for (int b = 0; b < 2044; b++)
 						{   if (blocks[b])
 							{
-								printf("\nbuscar %d en bitmap\n",blocks[b]);
+								//printf("\nbuscar %d en bitmap\n",blocks[b]);
 								int bitMapPointer = (disk - 1) * PARTITION_SIZE + BLOCK_SIZE;
 								fseek(file, bitMapPointer, SEEK_SET);
 								char* bm_buffer = malloc(sizeof(char) * BLOCK_SIZE);
