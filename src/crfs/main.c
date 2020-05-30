@@ -11,23 +11,7 @@ int main(int argc, char *argv[])
   char *diskName = argv[1];
   cr_mount(diskName);
   printf("%s\n", MOUNTED_DISK);
-  int result = cr_exists(1, "Baroque.mp3");
-  printf("result: %d\n", result);
-  crFILE *file = cr_open(1, "otro6.gif", 'w');
-  //printf("nombre %s\n", file->name);
-  char *buffer = malloc(sizeof(char) * 25);
-
-  for (int i = 0; i < 25; i++)
-  {
-    buffer[i] = 65 + i;
-  }
-  cr_write(file, buffer, 25);
-  free(buffer);
-  cr_close(file);
-  // cr_bitmap(1, 0);
-  //cr_hardlink(1, "text.txt", "abcdef.txt");
-  // cr_softlink(1, 4, "Baroque.mp3");
   cr_ls(1);
-  // cr_bitmap(1, 0);
-  //cr_directory(1);
+  crFILE *file = cr_open(1, "guides.txt", 'r');
+  cr_read(file);
 }

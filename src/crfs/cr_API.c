@@ -589,8 +589,13 @@ int cr_softlink(unsigned disk_orig, unsigned disk_dest, char *orig)
 
 int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
   FILE *file;
-  char *ptrs;
-  char fileName[29];
+	int real_bytes;
+  char *indexBlock;
+	char *dataBlock;
+	char *indirectionBlock;
+	char *data;
+	unsigned int location = 0;
+	unsigned int indirectionLocation = 0;
 
   file = fopen(MOUNTED_DISK, "rb+");
   if (file == NULL) {
@@ -598,10 +603,85 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
     exit(1);
   }
 
-  int indexPointer = file_desc->indexLocation + 12;
+	if (file_desc->size < n_bytes) {
+		real_bytes = file_desc->size;
+	} else {
+		real_bytes = n_bytes;
+	}
+	data = malloc(real_bytes);
+
+  int indexPointer = file_desc->indexLocation * BLOCK_SIZE;
   fseek(file, indexPointer, SEEK_SET);
-  ptrs = malloc(sizeof(char) * n_bytes);
-  fread(ptrs, sizeof(char), n_bytes, file);
+  indexBlock = malloc(sizeof(char) * BLOCK_SIZE);
+  fread(indexBlock, sizeof(char), BLOCK_SIZE, file);
+	for (int ptr = 0; ptr < 2044; ptr++) {
+		for (int i = 0; i < 4; i++) {
+			unsigned int byte = indexBlock[ptr * 4 + 11 + i] & 0x0FF;
+			location += byte;
+		}
+		int dataPointer = location * BLOCK_SIZE;
+		location = 0;
+		fseek(file, dataPointer, SEEK_SET);
+		dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
+		fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
+		if ((ptr + 1) * BLOCK_SIZE <= real_bytes) {
+			strcat(data, dataBlock);
+		} else if ((ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
+			int difference = (ptr + 1) * BLOCK_SIZE - real_bytes;
+			char *differenceData;
+			size_t j = 0;
+      for (int i = 0; i < difference; i++) {
+        differenceData[j++] = dataBlock[i];
+      }
+      differenceData[j] = 0;
+			strcat(data, differenceData);
+			break;
+		} else {
+			break;
+		}
+		free(dataBlock);
+	}
+	if (2044 * BLOCK_SIZE < real_bytes) {
+		for (size_t i = 4; 0 < i; i--) {
+			unsigned int byte = indexBlock[BLOCK_SIZE - i] & 0x0FF;
+			indirectionLocation += byte;
+		}
+		int indirectionPointer = indirectionLocation * BLOCK_SIZE;
+		fseek(file, indirectionPointer, SEEK_SET);
+		indirectionBlock = malloc(sizeof(char) * BLOCK_SIZE);
+		fread(indirectionBlock, sizeof(char), BLOCK_SIZE, file);
+		// Hay punteros 2048 en un bloque de indireccionamiento simple
+		for (int ptr = 0; ptr < 2048; ptr++) {
+			for (size_t i = 0; i < 4; i++) {
+				unsigned int byte = indirectionBlock[ptr * 4 + i] & 0x0FF;
+				location += byte;
+			}
+			int dataPointer = location * BLOCK_SIZE;
+			location = 0;
+			fseek(file, dataPointer, SEEK_SET);
+			dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
+			fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
+			if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE <= real_bytes) {
+				strcat(data, dataBlock);
+				free(dataBlock);
+			} else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
+				int difference = 2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes;
+				char *differenceData;
+				size_t j = 0;
+				for (int i = 0; i < difference; i++) {
+					differenceData[j++] = dataBlock[i];
+				}
+				differenceData[j] = 0;
+				strcat(data, differenceData);
+				break;
+			} else {
+				break;
+			}
+		}
+	}
+	free(indexBlock);
+	free(indirectionBlock);
+	return(real_bytes);
 }
 
 int cr_close(crFILE *file_desc) {
