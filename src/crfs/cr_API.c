@@ -687,6 +687,120 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 	return(real_bytes);
 }
 
+
+
+
+int cr_rm(unsigned disk, char* filename){
+	if (cr_exists(disk, filename))
+	{   FILE* file;
+		file = fopen(MOUNTED_DISK, "rb+");
+		char entryFilename[29]; 
+		char new_empty_data[32];
+		unsigned int references = 0;
+		for (int i = 0; i < 32; i++)
+			new_empty_data[i]=NULL;
+		if (file == NULL) {
+			perror("Could not open file");
+			exit(1);}
+		int directoryStartByte = (disk-1) * PARTITION_SIZE;
+		fseek(file, directoryStartByte, SEEK_SET);
+		char* buffer = malloc(sizeof(char) * BLOCK_SIZE);
+		fread(buffer, sizeof(char), BLOCK_SIZE, file);
+		for (int e = 0; e < 256; e++)
+		{   unsigned int first_byte= buffer[32*e];
+			unsigned int first_bit= (first_byte & 0x0FF) >> 7;
+			if (first_bit)
+			{
+				for (int i = 3; i < 32; i++)
+				{
+					char letra = buffer[e*32+i];
+					entryFilename[i-3]=letra;     
+				}
+				if (!strcmp(entryFilename,filename))
+				{
+					printf("%s está en la entrada %d\n", entryFilename, e);	
+					int entryPointer = (disk-1) * PARTITION_SIZE + e*32;
+					//obtenemos puntero a bloque indice
+					unsigned int byte1 = buffer[e * 32] & 0x07F;
+					unsigned int byte2 = buffer[e * 32 + 1] & 0x0FF;
+					unsigned int byte3 = buffer[e * 32 + 2] & 0x0FF;
+					unsigned int location = (byte1 << 16) + (byte2 << 8) + byte3;
+					printf(" la ubicación es %d", location);
+					free(buffer);
+					int indexBlockPointer = location * BLOCK_SIZE;
+					fseek(file, indexBlockPointer, SEEK_SET);
+					char* buffer = malloc(sizeof(char) * BLOCK_SIZE);
+					fread(buffer, sizeof(char), BLOCK_SIZE, file);
+					//lee las referencias
+					for (size_t i = 0; i < 4; i++)
+					{
+						unsigned int byte = buffer[i] & 0x0FF;
+						references += byte;
+					}
+					printf("\nel numero de referencias es: %d\n",references);	
+					//actualizamos referencias
+					references--;
+					fseek(file, indexBlockPointer, SEEK_SET);
+                    fwrite(&references, sizeof(int), 1, file);
+
+					//si el numero de refs restantes = 0, guardamos bloques para luego eliminarlos del bitmap
+                    if (!references)
+					{   int * blocks = malloc(sizeof(int)*2044);
+						for (int puntero = 0; puntero < 2044; puntero++)
+						{   
+							byte1 = buffer[puntero*32+12] & 0x0FF;
+							byte2 = buffer[puntero*32+13] & 0x0FF;
+							byte3 = buffer[puntero*32+14] & 0x0FF;
+							unsigned int byte4 = buffer[puntero*32+15] & 0x0FF;
+							int bm_pointer = (byte1<<24)+(byte2<<16)+(byte3<<8)+byte4 - 65536*(disk-1);
+							if (bm_pointer>0)
+							{
+								blocks[puntero] = bm_pointer;
+							}
+							else
+							{
+								blocks[puntero]=0;
+							}
+							
+						}
+						free(buffer);
+						//removemos los bloques de bitmap
+						for (int b = 0; b < 2044; b++)
+						{   if (blocks[b])
+							{
+								printf("\nbuscar %d en bitmap\n",blocks[b]);
+								int bitMapPointer = (disk - 1) * PARTITION_SIZE + BLOCK_SIZE;
+								fseek(file, bitMapPointer, SEEK_SET);
+								char* bm_buffer = malloc(sizeof(char) * BLOCK_SIZE);
+								fread(bm_buffer, sizeof(char), BLOCK_SIZE, file);
+								unsigned int byte = bm_buffer[blocks[b]/8];
+								int pos = blocks[b]-blocks[b]/8*8;
+							
+								byte &= ~(1<<(7-pos)); //aqui se cambia el bit a 0
+								fseek(file, bitMapPointer+blocks[b]/8, SEEK_SET);
+								char strbyte =byte;
+								fwrite(&strbyte, sizeof(strbyte), 1, file);
+								free(bm_buffer);
+					
+							}		
+						}
+					}
+					//borramos de directorio
+					fseek(file, entryPointer, SEEK_SET);
+					fwrite(&new_empty_data, sizeof(new_empty_data), 1, file);
+				    break;
+				}
+			}
+		}
+	fclose(file);
+	}
+	return 0;
+}
+
+
+
+
+
 int cr_close(crFILE *file_desc) {
 	free(file_desc);
 	return (0);

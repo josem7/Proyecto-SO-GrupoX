@@ -49,6 +49,11 @@ void cr_directory(unsigned disk);
 
 int cr_close(crFILE *file_desc);
 
+//función elimina el archivo referenciado  
+//elimina bloques solo si no hay más referencias
+int cr_rm(unsigned disk, char* filename);
+
+
 //Función para abrir un archivo
 //y se retorna un nuevo crFILE* que lo representa.
 crFILE *cr_open(unsigned disk, char *filename, char mode);
