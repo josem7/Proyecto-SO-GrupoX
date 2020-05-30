@@ -7,6 +7,9 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "cr_API.h"
 
 // Global Variables
@@ -133,6 +136,34 @@ void cr_block(unsigned block)
   }
 	free(buffer);
 	fclose(file);
+}
+
+// retorna el nombre del archivo numero n de un disco
+char* n_file_name(unsigned disk, unsigned n)
+{
+	FILE *file;
+	char *buffer;
+	char entryFileName[29];
+	char *result;
+	file = fopen(MOUNTED_DISK, "rb");
+	int directoryStartByte = (disk - 1) * PARTITION_SIZE;
+	fseek(file, directoryStartByte, SEEK_SET);
+	buffer = malloc(sizeof(char) * BLOCK_SIZE);
+	fread(buffer, sizeof(char), BLOCK_SIZE, file);
+
+	// 8192 / 32 = 256 osea son 256 entradas
+	for (int entry = n; entry < n+1; entry++)
+	{
+		for (int index = 3; index < 32; index++)
+		{
+			unsigned int byte = buffer[entry * 32 + index];
+			entryFileName[index - 3] = byte;
+		}
+		free(buffer);
+		fclose(file);
+		result = entryFileName;
+		return result;
+	}
 }
 // Funciones Pedidas
 void cr_mount(char *diskname)
@@ -729,7 +760,7 @@ int cr_rm(unsigned disk, char* filename){
 	if (cr_exists(disk, filename))
 	{   FILE* file;
 		file = fopen(MOUNTED_DISK, "rb+");
-		char entryFilename[29]; 
+		char entryFilename[29];
 		char new_empty_data[32];
 		unsigned int references = 0;
 		for (int i = 0; i < 32; i++)
@@ -749,11 +780,11 @@ int cr_rm(unsigned disk, char* filename){
 				for (int i = 3; i < 32; i++)
 				{
 					char letra = buffer[e*32+i];
-					entryFilename[i-3]=letra;     
+					entryFilename[i-3]=letra;
 				}
 				if (!strcmp(entryFilename,filename))
 				{
-					printf("%s está en la entrada %d\n", entryFilename, e);	
+					printf("%s está en la entrada %d\n", entryFilename, e);
 					int entryPointer = (disk-1) * PARTITION_SIZE + e*32;
 					//obtenemos puntero a bloque indice
 					unsigned int byte1 = buffer[e * 32] & 0x07F;
@@ -772,7 +803,7 @@ int cr_rm(unsigned disk, char* filename){
 						unsigned int byte = buffer[i] & 0x0FF;
 						references += byte;
 					}
-					printf("\nel numero de referencias es: %d\n",references);	
+					printf("\nel numero de referencias es: %d\n",references);
 					//actualizamos referencias
 					references--;
 					fseek(file, indexBlockPointer, SEEK_SET);
@@ -782,7 +813,7 @@ int cr_rm(unsigned disk, char* filename){
                     if (!references)
 					{   int * blocks = malloc(sizeof(int)*2044);
 						for (int puntero = 0; puntero < 2044; puntero++)
-						{   
+						{
 							byte1 = buffer[puntero*32+12] & 0x0FF;
 							byte2 = buffer[puntero*32+13] & 0x0FF;
 							byte3 = buffer[puntero*32+14] & 0x0FF;
@@ -796,7 +827,7 @@ int cr_rm(unsigned disk, char* filename){
 							{
 								blocks[puntero]=0;
 							}
-							
+
 						}
 						free(buffer);
 						//removemos los bloques de bitmap
@@ -810,14 +841,14 @@ int cr_rm(unsigned disk, char* filename){
 								fread(bm_buffer, sizeof(char), BLOCK_SIZE, file);
 								unsigned int byte = bm_buffer[blocks[b]/8];
 								int pos = blocks[b]-blocks[b]/8*8;
-							
+
 								byte &= ~(1<<(7-pos)); //aqui se cambia el bit a 0
 								fseek(file, bitMapPointer+blocks[b]/8, SEEK_SET);
 								char strbyte =byte;
 								fwrite(&strbyte, sizeof(strbyte), 1, file);
 								free(bm_buffer);
-					
-							}		
+
+							}
 						}
 					}
 					//borramos de directorio
@@ -917,15 +948,92 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes) {
 }
 
 int cr_unload(unsigned disk, char* orig, char* dest){
-  crFILE *file = cr_open(disk, orig, 'r');
-  char *buffer = calloc(file->size, 1);
-  int result = cr_read(file, buffer, file->size);
-  printf("%d\n",result );
-  FILE *write_ptr;
-  write_ptr = fopen(dest,"wb");  // w for write, b for binary
-  int escrito = fwrite(buffer,1,file->size, write_ptr);
-  printf("%d\n",escrito);
-  fclose(write_ptr);
-  free(buffer);
+	int result;
+	char auxDest[100];
+	char auxOrig[29];
+	char directory[40];
+	if (orig == NULL) {
+		int check = mkdir(dest,0777);
+		strcpy(directory,dest);
+		strcat(directory, "/");
+		if (!check)
+				printf("Directory created\n");
+
+		else
+		{
+				printf("Unable to create directory\n");
+		}
+		if (disk == 0) {
+			for (unsigned auxDisk = 1; auxDisk <= 4; auxDisk++) {
+				for (size_t n = 0; n < 256; n++) {
+					orig = n_file_name(auxDisk ,n);
+					result = strcmp(orig, "");
+					if (result != 0)
+					{
+						strcpy(auxDest,directory);
+						strcpy(auxOrig,orig);
+						crFILE *file = cr_open(auxDisk, auxOrig, 'r');
+						if (file != 0) {
+							strcpy(auxOrig,file->name);
+							char *buffer = calloc(file->size, 1);
+							int result = cr_read(file, buffer, file->size);
+							printf("%d\n",result );
+							FILE *write_ptr;
+							strcat(auxDest, auxOrig);
+							printf("%s\n",auxDest);
+							write_ptr = fopen(auxDest,"wb");  // w for write, b for binary
+							int escrito = fwrite(buffer,1,file->size, write_ptr);
+							printf("%d\n",escrito);
+							cr_close(file);
+							fclose(write_ptr);
+							free(buffer);
+						}
+					}
+				}
+			}
+		}else if (disk > 0 && disk <= 4 ) {
+			for (size_t n = 0; n < 256; n++) {
+				orig = n_file_name(disk ,n);
+				result = strcmp(orig, "");
+				if (result != 0)
+				{
+					strcpy(auxOrig,orig);
+					strcpy(auxDest,directory);
+					crFILE *file = cr_open(disk, auxOrig, 'r');
+					if (file != 0) {
+						strcpy(auxOrig,file->name);
+						char *buffer = calloc(file->size, 1);
+						int result = cr_read(file, buffer, file->size);
+						printf("%d\n",result );
+						FILE *write_ptr;
+						strcat(auxDest, auxOrig);
+						printf("%s\n",auxDest);
+						write_ptr = fopen(auxDest,"wb");  // w for write, b for binary
+						int escrito = fwrite(buffer,1,file->size, write_ptr);
+						printf("%d\n",escrito);
+						cr_close(file);
+						fclose(write_ptr);
+						free(buffer);
+					}
+				}
+			}
+		}else{
+			printf("Invalid Disk Number\n");
+		}
+	}else{
+		crFILE *file = cr_open(disk, orig, 'r');
+		if (file != 0) {
+			char *buffer = calloc(file->size, 1);
+			int result = cr_read(file, buffer, file->size);
+			printf("%d\n",result );
+			FILE *write_ptr;
+			write_ptr = fopen(dest,"wb");  // w for write, b for binary
+			int escrito = fwrite(buffer,1,file->size, write_ptr);
+			printf("%d\n",escrito);
+			cr_close(file);
+			fclose(write_ptr);
+			free(buffer);
+		}
+	}
   return(1);
 }

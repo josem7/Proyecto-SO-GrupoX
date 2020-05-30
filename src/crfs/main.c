@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
   //void *buffer = malloc(16000);
   //int result = cr_read(file, buffer, 16000);
   //free(buffer);
-  cr_unload(1, "guides.txt", "guides.txt");
+  cr_unload(1, NULL, "1");
   //cr_unload(1, "text.txt", "text.txt");
   printf("Result: %d\n", result);
 }
