@@ -11,7 +11,7 @@
 
 // Global Variables
 int PARTITION_SIZE = 536870912; //512 MB a bytes
-int BLOCK_SIZE = 8192; // 8KB a bytes
+int BLOCK_SIZE = 8192;			// 8KB a bytes
 int MAX_SIZE;
 
 // Struct de archivos
@@ -455,80 +455,93 @@ crFILE *cr_open(unsigned disk, char *filename, char mode)
 	}
 }
 
-int cr_hardlink(unsigned disk, char* orig, char* dest) {
-  FILE *file;
-  char *buffer;
-  char *strNum;
-  char fileData[3];
-  char entryFileData[32];
-  char entryFileName[29];
-  unsigned int location;
-  unsigned int references = 0;
-  uint64_t size = 0;
-  file = fopen(MOUNTED_DISK, "rb+");
-  if (file == NULL) {
-    perror("Could not open file");
-    exit(1);
-  }
+int cr_hardlink(unsigned disk, char *orig, char *dest)
+{
+	FILE *file;
+	char *buffer;
+	char *strNum;
+	char fileData[3];
+	char entryFileData[32];
+	char entryFileName[29];
+	unsigned int location;
+	unsigned int references = 0;
+	uint64_t size = 0;
+	file = fopen(MOUNTED_DISK, "rb+");
+	if (file == NULL)
+	{
+		perror("Could not open file");
+		exit(1);
+	}
 
-  int directoryPointer = (disk-1) * PARTITION_SIZE;
-  fseek(file, directoryPointer, SEEK_SET);
-  buffer = malloc(sizeof(char) * BLOCK_SIZE);
-  fread(buffer, sizeof(char), BLOCK_SIZE, file);
+	int directoryPointer = (disk - 1) * PARTITION_SIZE;
+	fseek(file, directoryPointer, SEEK_SET);
+	buffer = malloc(sizeof(char) * BLOCK_SIZE);
+	fread(buffer, sizeof(char), BLOCK_SIZE, file);
 
-  for (int entry = 0; entry < 256; entry++) {
-    for (int index = 0; index < 32; index++) {
-      unsigned int byte = buffer[entry * 32 + index];
-      if (index <= 2) {
-        fileData[index] = byte;
-      } else if (index > 2) {
-        entryFileName[index-3] = byte;
-      }
-    }
-    if (strcmp(orig, entryFileName) == 0) {
-      unsigned int byte1 = buffer[entry*32] & 0x07F;
-      unsigned int byte2 = buffer[entry*32+1] & 0x0FF;
-      unsigned int byte3 = buffer[entry*32+2] & 0x0FF;
-      location = (byte1 << 16) + (byte2 << 8) + byte3;
-      int indexBlockPointer = location * BLOCK_SIZE;
-      fseek(file, indexBlockPointer, SEEK_SET);
-      strNum = malloc(sizeof(char) * BLOCK_SIZE);
-      fread(strNum, sizeof(char), BLOCK_SIZE, file);
+	for (int entry = 0; entry < 256; entry++)
+	{
+		for (int index = 0; index < 32; index++)
+		{
+			unsigned int byte = buffer[entry * 32 + index];
+			if (index <= 2)
+			{
+				fileData[index] = byte;
+			}
+			else if (index > 2)
+			{
+				entryFileName[index - 3] = byte;
+			}
+		}
+		if (strcmp(orig, entryFileName) == 0)
+		{
+			unsigned int byte1 = buffer[entry * 32] & 0x07F;
+			unsigned int byte2 = buffer[entry * 32 + 1] & 0x0FF;
+			unsigned int byte3 = buffer[entry * 32 + 2] & 0x0FF;
+			location = (byte1 << 16) + (byte2 << 8) + byte3;
+			int indexBlockPointer = location * BLOCK_SIZE;
+			fseek(file, indexBlockPointer, SEEK_SET);
+			strNum = malloc(sizeof(char) * BLOCK_SIZE);
+			fread(strNum, sizeof(char), BLOCK_SIZE, file);
 
-      for (size_t i = 0; i < 4; i++) {
-        unsigned int byte = strNum[i] & 0x0FF;
-        references += byte;
-        if (i != 3) {
-          size <<= 8;
-        }
-      }
-      references++;
-      fseek(file, indexBlockPointer, SEEK_SET);
-      fwrite(&references, sizeof(int), 1, file);
-      free(strNum);
+			for (size_t i = 0; i < 4; i++)
+			{
+				unsigned int byte = strNum[i] & 0x0FF;
+				references += byte;
+				if (i != 3)
+				{
+					size <<= 8;
+				}
+			}
+			references++;
+			fseek(file, indexBlockPointer, SEEK_SET);
+			fwrite(&references, sizeof(int), 1, file);
+			free(strNum);
 
-      size_t j = 0;
-      for (int i = 0; i < 3; i++) {
-        entryFileData[j++] = fileData[i];
-      }
-      entryFileData[j] = 0;
-      break;
-    }
-  }
+			size_t j = 0;
+			for (int i = 0; i < 3; i++)
+			{
+				entryFileData[j++] = fileData[i];
+			}
+			entryFileData[j] = 0;
+			break;
+		}
+	}
 
-  for (int entry = 0; entry < 256; entry++) {
-    unsigned int firstByte = buffer[entry*32];
-    unsigned int validity = (firstByte & 10000000) >> 7;
-    if (validity == 0) {
-      strcat(entryFileData, dest);
-      int entryPointer = (disk-1) * PARTITION_SIZE + entry*32;
-      fseek(file, entryPointer, SEEK_SET);
-      fwrite(&entryFileData, sizeof(entryFileData), 1, file);
-      fclose(file);
-      break;
-    }
-  }
-  free(buffer);
+	for (int entry = 0; entry < 256; entry++)
+	{
+		unsigned int firstByte = buffer[entry * 32];
+		unsigned int validity = (firstByte & 10000000) >> 7;
+		if (validity == 0)
+		{
+			strcat(entryFileData, dest);
+			int entryPointer = (disk - 1) * PARTITION_SIZE + entry * 32;
+			fseek(file, entryPointer, SEEK_SET);
+			fwrite(&entryFileData, sizeof(entryFileData), 1, file);
+			fclose(file);
+			break;
+		}
+	}
+	free(buffer);
 }
 
 int cr_softlink(unsigned disk_orig, unsigned disk_dest, char *orig)
@@ -587,33 +600,40 @@ int cr_softlink(unsigned disk_orig, unsigned disk_dest, char *orig)
 	return 0;
 }
 
-int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
-  FILE *file;
+int cr_read(crFILE *file_desc, void *buffer, int n_bytes)
+{
+	FILE *file;
 	int real_bytes;
-  char *indexBlock;
+	char *indexBlock;
 	char *dataBlock;
 	char *indirectionBlock;
 	unsigned int location = 0;
 	unsigned int indirectionLocation = 0;
 
-  file = fopen(MOUNTED_DISK, "rb+");
-  if (file == NULL) {
-    perror("Could not open file");
-    exit(1);
-  }
+	file = fopen(MOUNTED_DISK, "rb+");
+	if (file == NULL)
+	{
+		perror("Could not open file");
+		exit(1);
+	}
 
-	if (file_desc->size < n_bytes) {
+	if (file_desc->size < n_bytes)
+	{
 		real_bytes = file_desc->size;
-	} else {
+	}
+	else
+	{
 		real_bytes = n_bytes;
 	}
 
-  int indexPointer = file_desc->indexLocation * BLOCK_SIZE;
-  fseek(file, indexPointer, SEEK_SET);
-  indexBlock = malloc(sizeof(char) * BLOCK_SIZE);
-  fread(indexBlock, sizeof(char), BLOCK_SIZE, file);
-	for (int ptr = 0; ptr < 2044; ptr++) {
-		for (int i = 0; i < 4; i++) {
+	int indexPointer = file_desc->indexLocation * BLOCK_SIZE;
+	fseek(file, indexPointer, SEEK_SET);
+	indexBlock = malloc(sizeof(char) * BLOCK_SIZE);
+	fread(indexBlock, sizeof(char), BLOCK_SIZE, file);
+	for (int ptr = 0; ptr < 2044; ptr++)
+	{
+		for (int i = 0; i < 4; i++)
+		{
 			unsigned int byte = indexBlock[ptr * 4 + 11 + i] & 0x0FF;
 			location += byte;
 		}
@@ -622,27 +642,37 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 		fseek(file, dataPointer, SEEK_SET);
 		dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
 		fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
-		if ((ptr + 1) * BLOCK_SIZE <= real_bytes) {
+		if ((ptr + 1) * BLOCK_SIZE <= real_bytes)
+		{
 			strcat(buffer, dataBlock);
-		} else if ((ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
+			free(dataBlock);
+		}
+		else if ((ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE)
+		{
 			int difference = (ptr + 1) * BLOCK_SIZE - real_bytes;
 			char *differenceData;
 			differenceData = malloc(difference);
 			size_t j = 0;
-      for (int i = 0; i < difference; i++) {
-        differenceData[j++] = dataBlock[i];
-      }
-      differenceData[j] = 0;
+			for (int i = 0; i < difference; i++)
+			{
+				differenceData[j++] = dataBlock[i];
+			}
+			//differenceData[j] = 0;
 			strcat(buffer, differenceData);
 			free(differenceData);
-			break;
-		} else {
+			free(dataBlock);
 			break;
 		}
-		free(dataBlock);
-	}
-	if (2044 * BLOCK_SIZE < real_bytes) {
-		for (size_t i = 4; 0 < i; i--) {
+		else
+		{
+			free(dataBlock);
+			break;
+		}
+		}
+	if (2044 * BLOCK_SIZE < real_bytes)
+	{
+		for (size_t i = 4; 0 < i; i--)
+		{
 			unsigned int byte = indexBlock[BLOCK_SIZE - i] & 0x0FF;
 			indirectionLocation += byte;
 		}
@@ -651,8 +681,10 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 		indirectionBlock = malloc(sizeof(char) * BLOCK_SIZE);
 		fread(indirectionBlock, sizeof(char), BLOCK_SIZE, file);
 		// Hay punteros 2048 en un bloque de indireccionamiento simple
-		for (int ptr = 0; ptr < 2048; ptr++) {
-			for (size_t i = 0; i < 4; i++) {
+		for (int ptr = 0; ptr < 2048; ptr++)
+		{
+			for (size_t i = 0; i < 4; i++)
+			{
 				unsigned int byte = indirectionBlock[ptr * 4 + i] & 0x0FF;
 				location += byte;
 			}
@@ -661,38 +693,50 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 			fseek(file, dataPointer, SEEK_SET);
 			dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
 			fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
-			if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE <= real_bytes) {
+			if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE <= real_bytes)
+			{
 				strcat(buffer, dataBlock);
 				free(dataBlock);
-			} else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
+				free(indirectionBlock);
+			}
+			else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE)
+			{
 				int difference = 2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes;
 				char *differenceData;
 				differenceData = malloc(difference);
 				size_t j = 0;
-				for (int i = 0; i < difference; i++) {
+				for (int i = 0; i < difference; i++)
+				{
 					differenceData[j++] = dataBlock[i];
 				}
 				differenceData[j] = 0;
 				strcat(buffer, differenceData);
 				free(differenceData);
 				free(indirectionBlock);
+				free(dataBlock);
 				break;
-			} else {
+			}
+			else
+			{
+				free(dataBlock);
 				free(indirectionBlock);
 				break;
 			}
 		}
 	}
 	free(indexBlock);
-	return(real_bytes);
+	fclose(file);
+	return (real_bytes);
 }
 
-int cr_close(crFILE *file_desc) {
+int cr_close(crFILE *file_desc)
+{
 	free(file_desc);
 	return (0);
 }
 
-int cr_write(crFILE *file_desc, void *buffer, int nbytes) {
+int cr_write(crFILE *file_desc, void *buffer, int nbytes)
+{
 	//next_free_block(disk)
 	char entryFileData[32] = {0};
 	//int contador = 0;
@@ -735,34 +779,36 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes) {
 			int entryPointer = (file_desc->disk - 1) * PARTITION_SIZE + entry * 32;
 			fseek(file, entryPointer, SEEK_SET);
 			fwrite(&entryFileData, sizeof(entryFileData), 1, file);
-			fclose(file);
+
 			break;
 		}
 	}
 	free(buffer_aux);
+	fclose(file);
+
 	/////////
+	int contador = 0;
+	int lista_punteros[2044] = {0};
+	for (int i = 12; i < 8188;) //8188
+	{
+		uint64_t puntero = 0;
+		for (int j = 0; j < 4; j++)
+		{
+			//printf("%d ", buffer_aux[i + j] & 0x0FF); //corresponde a 4 bytes de ubicacion de bloques
+			puntero += buffer_aux[i + j] & 0x0FF;
+			if (j != 3)
+			{
+				puntero <<= 8;
+			}
+		}
+		lista_punteros[contador] = puntero;
+		if (puntero > 0)
+			contador++;
+		//printf("\npuntero %ld\n", puntero);
 
-	// int lista_punteros[2044] = {0};
-	// for (int i = 12; i < 8188;) //8188
-	// {
-	// 	uint64_t puntero = 0;
-	// 	for (int j = 0; j < 4; j++)
-	// 	{
-	// 		//printf("%d ", buffer_aux[i + j] & 0x0FF); //corresponde a 4 bytes de ubicacion de bloques
-	// 		puntero += buffer_aux[i + j] & 0x0FF;
-	// 		if (j != 3)
-	// 		{
-	// 			puntero <<= 8;
-	// 		}
-	// 	}
-	// 	lista_punteros[contador] = puntero;
-	// 	if (puntero > 0)
-	// 		contador++;
-	// 	//printf("\npuntero %ld\n", puntero);
-
-	// 	i += 4;
-	// 	//printf("\n");
-	// }
-	// printf("contador: %d\n", contador);
+		i += 4;
+		//printf("\n");
+	}
+	printf("contador: %d\n", contador);
 	return 0;
 }
