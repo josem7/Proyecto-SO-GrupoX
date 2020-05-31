@@ -705,9 +705,12 @@ int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes) {
 		free(dataBlock);
 	}
 	if (2044 * BLOCK_SIZE < real_bytes) {
-		for (size_t i = 4; 0 < i; i--) {
-			unsigned int byte = indexBlock[BLOCK_SIZE - i] & 0x0FF;
+		for (int i = 0; i < 4; i++) {
+			unsigned int byte = indexBlock[2044 * 4 + 12 + i] & 0x0FF;
 			indirectionLocation += byte;
+			if (i != 3) {
+				indirectionLocation <<= 8;
+			}
 		}
 		int indirectionPointer = indirectionLocation * BLOCK_SIZE;
 		fseek(file, indirectionPointer, SEEK_SET);
@@ -728,7 +731,7 @@ int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes) {
 			dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
 			fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
 			if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE <= real_bytes) {
-				memcpy(buffer + ptr * BLOCK_SIZE, dataBlock, BLOCK_SIZE);
+				memcpy(buffer + ptr * BLOCK_SIZE + BLOCK_SIZE * 2044, dataBlock, BLOCK_SIZE);
 				free(dataBlock);
 			} else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
 				int difference = BLOCK_SIZE - (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes);
@@ -739,7 +742,7 @@ int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes) {
 					differenceData[j++] = dataBlock[i];
 				}
 				differenceData[j] = 0;
-				memcpy(buffer + ptr * BLOCK_SIZE, differenceData, difference);
+				memcpy(buffer + ptr * BLOCK_SIZE + BLOCK_SIZE * 2044, differenceData, difference);
 				free(differenceData);
 				free(indirectionBlock);
 				break;
@@ -1035,6 +1038,8 @@ int cr_unload(unsigned disk, char* orig, char* dest){
 			cr_close(file);
 			fclose(write_ptr);
 			free(buffer);
+		}else{
+			return(0);
 		}
 	}
   return(1);
