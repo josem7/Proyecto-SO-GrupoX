@@ -49,7 +49,7 @@ void cr_directory(unsigned disk);
 
 int cr_close(crFILE *file_desc);
 
-//función elimina el archivo referenciado  
+//función elimina el archivo referenciado
 //elimina bloques solo si no hay más referencias
 int cr_rm(unsigned disk, char* filename);
 
@@ -60,7 +60,7 @@ crFILE *cr_open(unsigned disk, char *filename, char mode);
 
 int cr_write(crFILE *file_desc, void *buffer, int nbytes);
 
-int cr_read(crFILE *file_desc, void *buffer, int n_bytes);
+int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes);
 
 //Función que se encarga de co-piar un archivo, la partición completa (
 //disk ∈ {1, ..., 4}) o el disco completo (disk = 0)

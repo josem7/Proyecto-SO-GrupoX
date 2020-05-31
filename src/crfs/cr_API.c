@@ -645,9 +645,9 @@ int cr_softlink(unsigned disk_orig, unsigned disk_dest, char *orig)
 	return 0;
 }
 
-int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
+int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes) {
   FILE *file;
-	int real_bytes;
+	uint64_t real_bytes;
   char *indexBlock;
 	char *dataBlock;
 	char *indirectionBlock;
@@ -684,7 +684,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 		dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
 		fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
 		if ((ptr + 1) * BLOCK_SIZE <= real_bytes) {
-			strcat(buffer, dataBlock);
+			memcpy(buffer + ptr * BLOCK_SIZE, dataBlock, BLOCK_SIZE);
 		} else if ((ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
 			int difference = BLOCK_SIZE - (ptr + 1) * BLOCK_SIZE + real_bytes;
 			char *differenceData;
@@ -694,11 +694,12 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
         differenceData[j++] = dataBlock[i];
       }
       differenceData[j] = 0;
-			strcat(buffer, differenceData);
+			memcpy(buffer + ptr * BLOCK_SIZE, differenceData, difference);
 			free(differenceData);
 			free(dataBlock);
 			break;
 		} else {
+			free(dataBlock);
 			break;
 		}
 		free(dataBlock);
@@ -727,7 +728,7 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 			dataBlock = malloc(sizeof(char) * BLOCK_SIZE);
 			fread(dataBlock, sizeof(char), BLOCK_SIZE, file);
 			if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE <= real_bytes) {
-				strcat(buffer, dataBlock);
+				memcpy(buffer + ptr * BLOCK_SIZE, dataBlock, BLOCK_SIZE);
 				free(dataBlock);
 			} else if (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes < BLOCK_SIZE) {
 				int difference = BLOCK_SIZE - (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes);
@@ -738,12 +739,13 @@ int cr_read(crFILE *file_desc, void *buffer, int n_bytes) {
 					differenceData[j++] = dataBlock[i];
 				}
 				differenceData[j] = 0;
-				strcat(buffer, differenceData);
+				memcpy(buffer + ptr * BLOCK_SIZE, differenceData, difference);
 				free(differenceData);
 				free(indirectionBlock);
 				break;
 			} else {
 				free(indirectionBlock);
+				free(dataBlock);
 				break;
 			}
 		}
@@ -975,7 +977,7 @@ int cr_unload(unsigned disk, char* orig, char* dest){
 						crFILE *file = cr_open(auxDisk, auxOrig, 'r');
 						if (file != 0) {
 							strcpy(auxOrig,file->name);
-							char *buffer = calloc(file->size, 1);
+							char *buffer = calloc(file->size, sizeof(char));
 							int result = cr_read(file, buffer, file->size);
 							printf("%d\n",result );
 							FILE *write_ptr;
@@ -1002,7 +1004,7 @@ int cr_unload(unsigned disk, char* orig, char* dest){
 					crFILE *file = cr_open(disk, auxOrig, 'r');
 					if (file != 0) {
 						strcpy(auxOrig,file->name);
-						char *buffer = calloc(file->size, 1);
+						char *buffer = calloc(file->size, sizeof(char));
 						int result = cr_read(file, buffer, file->size);
 						printf("%d\n",result );
 						FILE *write_ptr;
@@ -1023,12 +1025,12 @@ int cr_unload(unsigned disk, char* orig, char* dest){
 	}else{
 		crFILE *file = cr_open(disk, orig, 'r');
 		if (file != 0) {
-			char *buffer = calloc(file->size, 1);
+			char *buffer = calloc(file->size, sizeof(char));
 			int result = cr_read(file, buffer, file->size);
-			printf("%d\n",result );
 			FILE *write_ptr;
 			write_ptr = fopen(dest,"wb");  // w for write, b for binary
 			int escrito = fwrite(buffer,1,file->size, write_ptr);
+			printf("\n");
 			printf("%d\n",escrito);
 			cr_close(file);
 			fclose(write_ptr);
