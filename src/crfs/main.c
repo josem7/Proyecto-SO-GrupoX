@@ -17,12 +17,12 @@ int main(int argc, char *argv[])
   //void *buffer = malloc(16000);
   //cr_read(file, buffer, 16000);
   //free(buffer);
-  cr_rm(3, "Program.mkv");
+  //cr_rm(3, "Program.mkv");
   //cr_bitmap(3,0);
   //crFILE *file = cr_open(1, "guides.txt", 'r');
   //void *buffer = malloc(16000);
   //int result = cr_read(file, buffer, 16000);
   //free(buffer);
-  //cr_unload(2, "yes.mp3", "yes.mp3");
+  cr_unload(2, "yes.mp3", "yes.mp3");
   //cr_unload(1, "text.txt", "text.txt");
 }
