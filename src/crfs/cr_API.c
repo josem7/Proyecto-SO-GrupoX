@@ -1027,7 +1027,16 @@ int cr_unload(unsigned disk, char *orig, char *dest)
 
 int cr_write(crFILE *file_desc, void *buffer, int nbytes)
 {
+	int a_retornar = 0;
 	char entryFileData[32] = {0};
+	if (nbytes > 2044 * BLOCK_SIZE + 2048 * BLOCK_SIZE)
+	{
+		a_retornar = 2044 * BLOCK_SIZE + 2048 * BLOCK_SIZE;
+	}
+	else
+	{
+		a_retornar = nbytes;
+	}
 	FILE *file = fopen(MOUNTED_DISK, "rb+");
 	char *indexBlock;
 	//////
@@ -1456,5 +1465,5 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes)
 	fclose(file);
 	free(buffer2);
 	free(buffer_escritura);
-	return 0;
+	return a_retornar;
 }
