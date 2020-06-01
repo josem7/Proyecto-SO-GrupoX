@@ -802,6 +802,7 @@ int cr_rm(unsigned disk, char *filename)
 	if (cr_exists(disk, filename))
 	{
 		FILE *file;
+		int *blocks;
 		file = fopen(MOUNTED_DISK, "rb+");
 		char entryFilename[29];
 		char new_empty_data[32];
@@ -858,26 +859,51 @@ int cr_rm(unsigned disk, char *filename)
 					//si el numero de refs restantes = 0, guardamos bloques para luego eliminarlos del bitmap
 					if (!references)
 					{
-						int *blocks = malloc(sizeof(int) * 2044);
-						for (int puntero = 0; puntero < 2044; puntero++)
+						blocks = malloc(sizeof(int) * (2045+2048+1)); //punteros indice + punteros de ind directo + indice
+						blocks[2045+2048] = indexBlockPointer - 65536 * (disk - 1);
+						for (int puntero = 0; puntero < 2045; puntero++)
 						{
 							byte1 = buffer[puntero * 32 + 12] & 0x0FF;
 							byte2 = buffer[puntero * 32 + 13] & 0x0FF;
 							byte3 = buffer[puntero * 32 + 14] & 0x0FF;
 							unsigned int byte4 = buffer[puntero * 32 + 15] & 0x0FF;
 							int bm_pointer = (byte1 << 24) + (byte2 << 16) + (byte3 << 8) + byte4 - 65536 * (disk - 1);
+							
+							if (puntero==2044)
+							{   //indirecionamiento
+								int indBlockPointer = ((byte1 << 24) + (byte2 << 16) + (byte3 << 8) + byte4)*BLOCK_SIZE;
+								fseek(file, indBlockPointer, SEEK_SET);
+								char *buffer = malloc(sizeof(char) * BLOCK_SIZE);
+								fread(buffer, sizeof(char), BLOCK_SIZE, file);
+								for (int puntero_ind = 0; puntero_ind < 2048; puntero_ind++){
+										byte1 = buffer[puntero_ind * 32] & 0x0FF;
+										byte2 = buffer[puntero_ind * 32+1] & 0x0FF;
+										byte3 = buffer[puntero_ind * 32 + 2] & 0x0FF;
+										byte4 = buffer[puntero_ind * 32 + 3] & 0x0FF;
+										int bm_pointer2 = (byte1 << 24) + (byte2 << 16) + (byte3 << 8) + byte4 - 65536 * (disk - 1);
+										if (bm_pointer > 0)
+										{
+											blocks[puntero_ind+2045] = bm_pointer2;
+										}
+										else
+										{
+											break;
+										}
+									
+								}
+
+							}
 							if (bm_pointer > 0)
 							{
 								blocks[puntero] = bm_pointer;
 							}
 							else
-							{
-								break;
+							{   break;
 							}
 						}
 						free(buffer);
 						//removemos los bloques de bitmap
-						for (int b = 0; b < 2044; b++)
+						for (int b = 0; b < 2044+2049; b++)
 						{
 							if (blocks[b])
 							{
@@ -888,7 +914,6 @@ int cr_rm(unsigned disk, char *filename)
 								fread(bm_buffer, sizeof(char), BLOCK_SIZE, file);
 								unsigned int byte = bm_buffer[blocks[b] / 8];
 								int pos = blocks[b] - blocks[b] / 8 * 8;
-
 								byte &= ~(1 << (7 - pos)); //aqui se cambia el bit a 0
 								fseek(file, bitMapPointer + blocks[b] / 8, SEEK_SET);
 								char strbyte = byte;
@@ -897,6 +922,7 @@ int cr_rm(unsigned disk, char *filename)
 							}
 						}
 					}
+					free(blocks);
 					//borramos de directorio
 					fseek(file, entryPointer, SEEK_SET);
 					fwrite(&new_empty_data, sizeof(new_empty_data), 1, file);
