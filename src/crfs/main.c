@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   //void *buffer = malloc(16000);
   //int result = cr_read(file, buffer, 16000);
   //free(buffer);
-  //cr_unload(2, "yes.mp3", "yes.mp3");
+  cr_unload(2, "yes.mp3", "yes.mp3");
   //cr_unload(1, "text.txt", "text.txt");
 
   // cr_load(4, "src/crfs");

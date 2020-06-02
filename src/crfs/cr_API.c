@@ -785,7 +785,7 @@ int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes)
 			{
 				int difference = BLOCK_SIZE - (2044 * BLOCK_SIZE + (ptr + 1) * BLOCK_SIZE - real_bytes);
 				char *differenceData;
-				differenceData = malloc(difference);
+				differenceData = malloc(difference + 1);
 				size_t j = 0;
 				for (int i = 0; i < difference; i++)
 				{
@@ -795,6 +795,7 @@ int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes)
 				memcpy(buffer + ptr * BLOCK_SIZE + BLOCK_SIZE * 2044, differenceData, difference);
 				free(differenceData);
 				free(indirectionBlock);
+				free(dataBlock);
 				break;
 			}
 			else
@@ -907,7 +908,9 @@ int cr_rm(unsigned disk, char *filename)
 										{
 											break;
 										}
+									
 								}
+
 							}
 							if (bm_pointer > 0)
 							{
