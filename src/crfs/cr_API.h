@@ -65,3 +65,5 @@ int cr_read(crFILE *file_desc, void *buffer, uint64_t n_bytes);
 //Función que se encarga de co-piar un archivo, la partición completa (
 //disk ∈ {1, ..., 4}) o el disco completo (disk = 0)
 int cr_unload(unsigned disk, char* orig, char* dest);
+
+int cr_load(unsigned disk, char *orig);

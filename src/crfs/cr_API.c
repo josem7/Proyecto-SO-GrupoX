@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <dirent.h>
 #include "cr_API.h"
 
 // Global Variables
@@ -165,6 +166,18 @@ char *n_file_name(unsigned disk, unsigned n)
 		return result;
 	}
 }
+
+int file_size(char *file_name) {
+	int start;
+	int end;
+	FILE *file = fopen(file_name, "r");
+	start = ftell(file);
+	fseek(file, 0, SEEK_END);
+	end = ftell(file);
+	fclose(file);
+	return(end - start); 
+}
+
 // Funciones Pedidas
 void cr_mount(char *diskname)
 {
@@ -860,6 +873,11 @@ int cr_rm(unsigned disk, char *filename)
 					if (!references)
 					{
 						blocks = malloc(sizeof(int) * (2045+2048+1)); //punteros indice + punteros de ind directo + indice
+						for (int i = 0; i < (2045+2048+1); i++)
+						{
+							blocks[i]=0;
+						}
+						
 						blocks[2045+2048] = indexBlockPointer - 65536 * (disk - 1);
 						for (int puntero = 0; puntero < 2045; puntero++)
 						{
@@ -889,9 +907,7 @@ int cr_rm(unsigned disk, char *filename)
 										{
 											break;
 										}
-									
 								}
-
 							}
 							if (bm_pointer > 0)
 							{
@@ -901,7 +917,7 @@ int cr_rm(unsigned disk, char *filename)
 							{   break;
 							}
 						}
-						free(buffer);
+						
 						//removemos los bloques de bitmap
 						for (int b = 0; b < 2044+2049; b++)
 						{
@@ -921,8 +937,9 @@ int cr_rm(unsigned disk, char *filename)
 								free(bm_buffer);
 							}
 						}
+						free(blocks);
 					}
-					free(blocks);
+					free(buffer);
 					//borramos de directorio
 					fseek(file, entryPointer, SEEK_SET);
 					fwrite(&new_empty_data, sizeof(new_empty_data), 1, file);
@@ -1492,4 +1509,44 @@ int cr_write(crFILE *file_desc, void *buffer, int nbytes)
 	free(buffer2);
 	free(buffer_escritura);
 	return a_retornar;
+}
+
+int cr_load(unsigned disk, char *orig) {
+	struct stat path_stat;
+	struct dirent *dirFile;
+
+  stat(orig, &path_stat);
+  if (S_ISREG(path_stat.st_mode)) {
+		char delim[] = "/";
+		char name[250];
+		char orig_aux[250];
+		strcpy(orig_aux, orig);
+		char *ptr = strtok(orig_aux, delim);
+		strcpy(name, ptr);
+		while (ptr = strtok(NULL, delim)) {
+    	strcpy(name, ptr);
+  	}
+		crFILE *file = cr_open(disk, name, 'w');
+		cr_write(file, orig, file_size(orig));
+	} else if (S_ISDIR(path_stat.st_mode)) {
+		DIR *origin = opendir(orig);
+		if (origin == NULL) {
+			perror("Could not open directory");
+			exit(1);
+		}
+		while ((dirFile = readdir(origin)) != NULL) {
+			if (dirFile->d_type == 8) {
+				char path[strlen(dirFile->d_name) + strlen(orig)];
+				strcpy(path, orig);
+				strcat(path, "/");
+				strcat(path, dirFile->d_name);
+				crFILE *file = cr_open(disk, dirFile->d_name, 'w');
+				cr_write(file, path, file_size(path));
+			}
+		}
+		closedir(origin);
+	} else {
+		perror("Invalid Path");
+		exit(1);
+	}
 }
